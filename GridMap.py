@@ -145,18 +145,25 @@ class GridMap:
 
         return crime_by_cell
 
-    def set_borders(self, basemap, shapearray):
+    def set_borders(self, basemap, shapearray, force=False):
         in_borders = []
-        for l in range(0, self.step):
-            for c in range(0, self.step):
-                x, y = basemap(self.grid[l][c]['centroid'][0], self.grid[l][c]['centroid'][1])
-                pt = Point(x, y)
-                poly = Polygon(shapearray[0])
-                if pt.within(poly) == True:
-                    in_borders.append((l, c))
+        if force == True:
+            for l in range(0, self.step):
+                for c in range(0, self.step):
                     self.grid[l][c]['in_territory'] = True
-                else:
-                    self.grid[l][c]['in_territory'] = False
+                    in_borders.append((l, c))
+
+        else:
+            for l in range(0, self.step):
+                for c in range(0, self.step):
+                    x, y = basemap(self.grid[l][c]['centroid'][0], self.grid[l][c]['centroid'][1])
+                    pt = Point(x, y)
+                    poly = Polygon(shapearray[0])
+                    if pt.within(poly) == True:
+                        in_borders.append((l, c))
+                        self.grid[l][c]['in_territory'] = True
+                    else:
+                        self.grid[l][c]['in_territory'] = False
 
         return in_borders
 
