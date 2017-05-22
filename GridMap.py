@@ -473,5 +473,32 @@ class GridMap:
                     zi = griddata(x, y, z, xi, yi, interp='linear')
                     cs = basemap.contourf(xi, yi, zi, vmin=1, vmax=self.get_max_crimes()['total_crimes'], alpha=0.5)
 
+    def event_points(self, basemap, corner_list, interpol_list, cmark='g', imark='b'):
+        #corner_list, interpol_list = lat, lon
+        self.plot_grid(basemap, 0, 1.0)
+        
+        corner_lats = []
+        corner_lons = []
+        interpol_lats = []
+        interpol_lons = []
+
+        for latlon in corner_list:
+            lon, lat = basemap(latlon[1], latlon[0])
+            corner_lons.append(lon)
+            corner_lats.append(lat)
+
+        for latlon in interpol_list:
+            lon, lat = basemap(latlon[1], latlon[0])
+            interpol_lons.append(lon)
+            interpol_lats.append(lat)
+            
+        basemap.scatter(corner_lons, corner_lats, marker='D',color='m')
+        basemap.scatter(interpol_lons, interpol_lats, marker='o',color='b')
+
+       
+
+
+
+
 
 
