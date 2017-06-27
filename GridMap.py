@@ -332,7 +332,7 @@ class GridMap:
 
         return dictimages
 
-    def read_point_list(filename):
+    def read_point_list(self, filename):
         pointlist = []
         fw = open(filename, 'r')
         lines = fw.readlines()
