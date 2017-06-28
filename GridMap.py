@@ -332,6 +332,17 @@ class GridMap:
 
         return dictimages
 
+    def read_point_list(self, filename):
+        pointlist = []
+        fw = open(filename, 'r')
+        lines = fw.readlines()
+        for line in lines:
+            line = line.replace('(','').replace(')','').replace('\n','')
+            lat, lon = line.split(',')
+            pointlist.append((float(lat),float(lon)))
+
+        return pointlist
+
 # TODO: Add parameter fromJson = True -> and trainsform key in str: images_dict[label][str(i)][0][1]
     def gen_train_test(self, images_dict, source_path, destiny_path, maxfiles, trainpercent):
         lenght_per_labels = {}
