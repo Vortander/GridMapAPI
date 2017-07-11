@@ -68,6 +68,7 @@ class GridMap:
         self.uprightlat = uprightlat
         self.image_distribution = {}
         self.window = ""
+        self.labels = list()
 
         inc_lon = (uprightlon - lowerleftlon) / step
         inc_lat = (uprightlat - lowerleftlat) / step
@@ -89,7 +90,9 @@ class GridMap:
                         'date_time': list(),
                         'in_territory': False,
                         'crimes_per_window': {},
-                        'attributes_per_window': {}}
+                        'attributes_per_window': {},
+                        'label': None,
+                        'train_or_test': None}
                 
                 self.grid[l][c] = cell
                 
@@ -292,6 +295,69 @@ class GridMap:
 
         return crimes_with_label
 
+    def set_labels(self, labelslist):
+        self.labels = labelslist
+
+    def gen_pointlist_from_dir(self, path, tot='all', filename="pointListFromDir.list"):
+        file_list = sorted(os.listdir(path))
+        latlons = list()
+        for filename in file_list:
+            slices = filename.split('_')
+            if len(slices) > 3:
+                line = slices[0]
+                lat = slices[1]
+                lon = slices[2]
+            elif len(slices) == 3:
+                line = None
+                lat = slices[0]
+                lon = slices[1]
+            else:
+                sys.exit("Wrong file name format: accept only [line_lat_lon_cam] or [lat_lon_cam]")
+            
+            latlons.append((line, lat, lon))
+        
+        latlons = list(set(latlons))
+        if tot != 'all':
+            lim = tot
+        else:
+            lim = len(latlons)
+        
+        fw = open(filename, 'w')
+        for point in latlons[:lim]:
+            fw.write(point[1] + ',' + point[2] + '\n')
+
+        fw.close()
+        return latlons[:lim]
+
+
+    def set_labels_per_cell(self, lowercell, uppercell, label, train_or_test):
+        for l in range(lowercell[0], uppercell[0]+1):
+            for c in range(lowercell[1], uppercell[1]+1):
+                self.grid[l][c]['label'] = label
+                self.grid[l][c]['train_or_test'] = train_or_test
+
+    def gen_point_labels(self, pointListFromDir, filename="pointsLabel.list"):
+        fw = open(filename, 'w')
+        for point in pointListFromDir:
+            cell = self.find_cell(point[0], point[1])
+            if not cell:
+                continue
+            else:
+                fw.write(str(point[0]) + ',' + str(point[1]) + ',' + str(cell['label']) + ',' + str(cell['train_or_test']) + '\n')
+        fw.close()
+
+    def copy_images_to_dir(self, sourcepath, destinypath, filename="pointsLabel.list"):
+        fr = open(filename, 'r')
+        pointlabels = fr.readlines()
+
+        for point in pointlabels:
+            for c in ['0', '90', '180', '270']:
+                try:
+                    copy2(sourcepath + '/' + str(point[0]) + "_" + str(point[1]) + "_" + c + '.jpg', destinypath + "/")
+                except:
+                    print("Could not copy file ", sourcepath + '/' + str(point[0]) + "_" + str(point[1]) + "_" + c + '.jpg', destinypath + "/")
+
+
     def gen_imagelist_with_label(self, cell_path, crimes_with_label, filename="imageListLabels.list"):
         fw = open(filename, 'w')
         fw.write('line,column,file,label\n')
@@ -332,13 +398,16 @@ class GridMap:
 
         return dictimages
 
+#TODO: Mudar esse nome para 'gen_point_list'
     def read_point_list(self, filename):
         pointlist = []
         fw = open(filename, 'r')
         lines = fw.readlines()
         for line in lines:
             line = line.replace('(','').replace(')','').replace('\n','')
-            lat, lon = line.split(',')
+            slices = line.split(',')
+            lat = slices[0]
+            lon = slices[1]
             pointlist.append((float(lat),float(lon)))
 
         return pointlist
@@ -484,7 +553,7 @@ class GridMap:
                     zi = griddata(x, y, z, xi, yi, interp='linear')
                     cs = basemap.contourf(xi, yi, zi, vmin=1, vmax=self.get_max_crimes()['total_crimes'], alpha=0.5)
 
-    def event_points(self, basemap, corner_list, interpol_list, cmark='g', imark='b'):
+    def street_points(self, basemap, corner_list, interpol_list, cmark='g', imark='b'):
         #corner_list, interpol_list = lat, lon
         self.plot_grid(basemap, 0, 1.0)
         
@@ -505,6 +574,41 @@ class GridMap:
             
         basemap.scatter(corner_lons, corner_lats, marker='D',color='m')
         basemap.scatter(interpol_lons, interpol_lats, marker='o',color='b')
+
+    def image_points(self, basemap, pointlist):
+        self.plot_grid(basemap, 0, 1.0)
+        lons = []
+        lats = [] 
+        for latlon in pointlist:
+            lon, lat = basemap(latlon[1], latlon[0])
+            lons.append(lon)
+            lats.append(lat)
+
+        basemap.scatter(lons, lats, marker='o', color='m')
+
+    def event_points(self, basemap, pointlist):
+        self.plot_grid(basemap, 0, 1.0)
+        lons = []
+        lats = [] 
+        for latlon in pointlist:
+            lon, lat = basemap(latlon[1], latlon[0])
+            lons.append(lon)
+            lats.append(lat)
+
+        basemap.scatter(lons, lats, marker='D', color='r')
+
+    def mark_cells(self, basemap, lowercell, uppercell, color='r'):
+        self.plot_grid(basemap, 0, 1.0)
+        for l in range(lowercell[0], uppercell[0]+1):
+            for c in range(lowercell[1], uppercell[1]+1):
+                centroid = basemap(self.grid[l][c]['centroid'][0], self.grid[l][c]['centroid'][1])
+                basemap.plot(centroid[0], centroid[1], 'D', markersize=3.0, linewidth=3.0, color=color)
+
+
+
+
+
+
 
        
 
