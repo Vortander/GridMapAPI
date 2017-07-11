@@ -301,8 +301,8 @@ class GridMap:
     def gen_pointlist_from_dir(self, path, tot='all', filename="pointListFromDir.list"):
         file_list = sorted(os.listdir(path))
         latlons = list()
-        for filename in file_list:
-            slices = filename.split('_')
+        for imagename in file_list:
+            slices = imagename.split('_')
             if len(slices) > 3:
                 line = slices[0]
                 lat = slices[1]
