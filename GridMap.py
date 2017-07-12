@@ -284,7 +284,7 @@ class GridMap:
         n = len(label_list)
         block_label = 0
         for i in range(n, 0, -1):
-            group = round(len(crimes_list)/i)s
+            group = round(len(crimes_list)/i)
             c = crimes_list[:group]
             crimes_list = crimes_list[group:]
             for j in c:
