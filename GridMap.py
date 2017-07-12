@@ -284,7 +284,7 @@ class GridMap:
         n = len(label_list)
         block_label = 0
         for i in range(n, 0, -1):
-            group = round(len(crimes_list)/i)
+            group = round(len(crimes_list)/i)s
             c = crimes_list[:group]
             crimes_list = crimes_list[group:]
             for j in c:
@@ -299,7 +299,12 @@ class GridMap:
         self.labels = labelslist
 
     def gen_pointlist_from_dir(self, path, tot='all', filename="pointListFromDir.list"):
-        file_list = sorted(os.listdir(path))
+        imagepath = path + "/images"
+        metapath = path + "/meta"
+        print(imagepath)
+        print(metapath)
+
+        file_list = sorted(os.listdir(imagepath))
         latlons = list()
         for imagename in file_list:
             slices = imagename.split('_')
@@ -317,18 +322,36 @@ class GridMap:
             latlons.append((line, lat, lon))
         
         latlons = list(set(latlons))
+
         if tot != 'all':
             lim = tot
         else:
             lim = len(latlons)
-        
+
         fw = open(filename, 'w')
+        fw1 = open('removed.log', 'w')
+         
         for point in latlons[:lim]:
-            fw.write(point[1] + ',' + point[2] + '\n')
+            status = list()
+            for c in ['0', '90', '180', '270']:
+                fr = open(metapath + '/' + point[0] + '_' + point[1] + '_' + str(c) + '.jpg', 'r')
+                meta = fr.readlines()
+                if meta['status'] != 'OK':
+                    status.append(meta['status'])
+            if len(status) == 0:
+                fw.write(point[1] + ',' + point[2] + '\n')
+            else:
+                fw1.write(str(status) +  '\n')
+
+
+        
+        # fw = open(filename, 'w')
+        # for point in latlons[:lim]:
+        #     fw.write(point[1] + ',' + point[2] + '\n')
 
         fw.close()
-        return latlons[:lim]
-
+        fw1.close()
+        # return latlons[:lim]
 
     def set_labels_per_cell(self, lowercell, uppercell, label, train_or_test):
         for l in range(lowercell[0], uppercell[0]+1):
