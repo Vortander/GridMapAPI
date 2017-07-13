@@ -546,14 +546,14 @@ class GridMap:
         total_crimes = []
         ylat = []
         xlon = []
-        for dlat, dlon in zip(data.Latitude.values, data.Longitude.values):
+        for dlat, dlon in zip(data.lat.values, data.lon.values):
             c = self.find_cell(dlat, dlon)
             if not c:
                 total_crimes.append(0)
             else:
                 total_crimes.append(self.grid[c[0]][c[1]]['total_crimes'])
         
-        for dlat, dlon in zip(data.Latitude.values, data.Longitude.values):
+        for dlat, dlon in zip(data.lat.values, data.lon.values):
             x, y = basemap(dlon, dlat)
             xlon.append(x)
             ylat.append(y)
@@ -617,7 +617,7 @@ class GridMap:
         basemap.scatter(interpol_lons, interpol_lats, marker='o',color='b')
 
     def image_points(self, basemap, filenameListFromDir, color='m'):
-        self.plot_grid(basemap, 0, 1.0)
+        self.plot_grid(basemap, 0, 0.6)
         lons = []
         lats = [] 
         
@@ -630,7 +630,7 @@ class GridMap:
             lons.append(lon)
             lats.append(lat)
 
-        basemap.scatter(lons, lats, marker='o', color=color)
+        basemap.scatter(lons, lats, marker='+', color=color)
 
     def event_points(self, basemap, pointlist):
         self.plot_grid(basemap, 0, 1.0)
