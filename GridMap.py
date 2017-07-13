@@ -298,13 +298,15 @@ class GridMap:
     def set_labels(self, labelslist):
         self.labels = labelslist
 
-    def gen_pointlist_from_dir(self, path, tot='all', filename="pointListFromDir.list"):
+    def gen_pointlist_from_dir(self, path, tot='all', filename="pointListFromDir.list", metacheck=True):
         imagepath = path + "/images"
         metapath = path + "/meta"
-        print(imagepath)
-        print(metapath)
 
-        file_list = sorted(os.listdir(imagepath))
+        try:
+            file_list = sorted(os.listdir(imagepath))
+        except:
+            file_list = sorted(os.listdir(path))
+            
         latlons = list()
         for imagename in file_list:
             slices = imagename.split('_')
@@ -329,15 +331,22 @@ class GridMap:
             lim = len(latlons)
 
         fw = open(filename, 'w')
-        fw1 = open('removed.log', 'w')
-         
+        fw1 = open('removed_' + filename + '.log', 'w')
+        
         for point in latlons[:lim]:
             status = list()
-            for c in ['0', '90', '180', '270']:
-                fr = open(metapath + '/' + point[0] + '_' + point[1] + '_' + str(c) + '.jpg', 'r')
-                meta = fr.readlines()
-                if meta['status'] != 'OK':
-                    status.append(meta['status'])
+
+            if metacheck == True:
+                for c in ['0', '90', '180', '270']:
+                    try:
+                        with open(str(metapath) + '/' + str(point[1]) + '_' + str(point[2]) + '_' + c + '.txt', 'r') as fr:
+                            meta = json.load(fr)
+                        if meta['status'] != 'OK':
+                            status.append(meta['status'])
+                    except:
+                        fw1.write("Not found: " + str(metapath) + '/' + str(point[1]) + '_' + str(point[2]) + '_' + c + '.txt\n')
+                        pass
+                
             if len(status) == 0:
                 fw.write(point[1] + ',' + point[2] + '\n')
             else:
@@ -359,26 +368,35 @@ class GridMap:
                 self.grid[l][c]['label'] = label
                 self.grid[l][c]['train_or_test'] = train_or_test
 
-    def gen_point_labels(self, pointListFromDir, filename="pointsLabel.list"):
-        fw = open(filename, 'w')
+    
+    # def gen_point_labels(self, pointListFromDir, filename="pointsLabel.list"):
+    #     fw = open(filename, 'w')
+    #     for point in pointListFromDir:
+    #         cell = self.find_cell(point[0], point[1])
+    #         if not cell:
+    #             continue
+    #         else:
+    #             fw.write(str(point[0]) + ',' + str(point[1]) + ',' + str(cell['label']) + ',' + str(cell['train_or_test']) + '\n')
+    #     fw.close()
+
+    def copy_images_to_dir(self, sourcepath, destinypath, filenameListFromDir):
+        fr = open(filenameListFromDir, 'r')
+        pointListFromDir = fr.readlines()
         for point in pointListFromDir:
-            cell = self.find_cell(point[0], point[1])
+            point = point.replace("\n","")
+            lat, lon = point.split(',')
+            cell = self.find_cell(float(lat), float(lon))
             if not cell:
                 continue
             else:
-                fw.write(str(point[0]) + ',' + str(point[1]) + ',' + str(cell['label']) + ',' + str(cell['train_or_test']) + '\n')
-        fw.close()
-
-    def copy_images_to_dir(self, sourcepath, destinypath, filename="pointsLabel.list"):
-        fr = open(filename, 'r')
-        pointlabels = fr.readlines()
-
-        for point in pointlabels:
-            for c in ['0', '90', '180', '270']:
-                try:
-                    copy2(sourcepath + '/' + str(point[0]) + "_" + str(point[1]) + "_" + c + '.jpg', destinypath + "/")
-                except:
-                    print("Could not copy file ", sourcepath + '/' + str(point[0]) + "_" + str(point[1]) + "_" + c + '.jpg', destinypath + "/")
+                train_or_test = self.grid[cell[0]][cell[1]]['train_or_test']
+                label = self.grid[cell[0]][cell[1]]['label']
+                if train_or_test != None or label != None:
+                    for c in ['0', '90', '180', '270']:
+                        try:
+                            copy2(sourcepath + '/' + str(lat) + "_" + str(lon) + "_" + c + '.jpg', destinypath + '/' + str(train_or_test) + '/' + str(label) + '/')
+                        except:
+                            print("Could not copy file ", sourcepath + '/' + str(lat) + "_" + str(lon) + "_" + c + '.jpg', destinypath + '/' + str(train_or_test) + '/' + str(label) + '/')
 
 
     def gen_imagelist_with_label(self, cell_path, crimes_with_label, filename="imageListLabels.list"):
@@ -422,7 +440,7 @@ class GridMap:
         return dictimages
 
 #TODO: Mudar esse nome para 'gen_point_list'
-    def read_point_list(self, filename):
+    def read_point_list(self, filename):    
         pointlist = []
         fw = open(filename, 'r')
         lines = fw.readlines()
@@ -598,16 +616,21 @@ class GridMap:
         basemap.scatter(corner_lons, corner_lats, marker='D',color='m')
         basemap.scatter(interpol_lons, interpol_lats, marker='o',color='b')
 
-    def image_points(self, basemap, pointlist):
+    def image_points(self, basemap, filenameListFromDir, color='m'):
         self.plot_grid(basemap, 0, 1.0)
         lons = []
         lats = [] 
-        for latlon in pointlist:
-            lon, lat = basemap(latlon[1], latlon[0])
+        
+        fr = open(filenameListFromDir, 'r')
+        pointListFromDir = fr.readlines()
+        for point in pointListFromDir:
+            point = point.replace("\n","")
+            l, c = point.split(',')
+            lon, lat = basemap(float(c), float(l))
             lons.append(lon)
             lats.append(lat)
 
-        basemap.scatter(lons, lats, marker='o', color='m')
+        basemap.scatter(lons, lats, marker='o', color=color)
 
     def event_points(self, basemap, pointlist):
         self.plot_grid(basemap, 0, 1.0)
