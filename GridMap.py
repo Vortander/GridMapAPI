@@ -13,6 +13,7 @@ import math
 import os, sys
 from shutil import copy2
 from random import randint
+from scipy.misc import imread
 
 def _haversine(lat1, lon1, lat2, lon2):
     R = 6378.137
@@ -34,6 +35,19 @@ def _random_list(sample_size, range_size):
             sample_size-=1
 
     return rlist
+
+def _on_line(lat1, lon1, lat2, lon2, lat_test, lon_test):
+    if (lon2 - lon1) == 0:
+        if (lat_test <= lat2) and (lat_test >= lat1) and (lon_test == lon2):
+            return True
+    elif (lat2 - lat1) == 0:
+        if(lon_test <= lon2) and (lon_test >= lon1) and (lat_test == lat2):
+            return True
+        else:
+            return False
+    else:
+        return False
+
 
 class Window:
 
@@ -160,13 +174,14 @@ class GridMap:
             for l in range(0, self.step):
                 for c in range(0, self.step):
                     x, y = basemap(self.grid[l][c]['centroid'][0], self.grid[l][c]['centroid'][1])
-                    pt = Point(x, y)
-                    poly = Polygon(shapearray[0])
-                    if pt.within(poly) == True:
-                        in_borders.append((l, c))
-                        self.grid[l][c]['in_territory'] = True
-                    else:
-                        self.grid[l][c]['in_territory'] = False
+                    for shape in shapearray:
+                        pt = Point(x, y)
+                        poly = Polygon(shape)
+                        if pt.within(poly) == True:
+                            in_borders.append((l, c))
+                            self.grid[l][c]['in_territory'] = True
+                        #else:
+                        #    self.grid[l][c]['in_territory'] = False
 
         return in_borders
 
@@ -256,7 +271,7 @@ class GridMap:
             self.grid[l][c]['attributes_per_window'][attribute] = { window: 1 }
 
 
-    def set_labels_per_point(self, labels_per_cell, filename='LabelsPerPoint.list'):
+    def set_labels_per_point(self, labels_per_cell, filename='LabelsPerPoint.list', borderline=True):
         fw = open(filename, 'w')
         fw.write('cell,label,point\n')
         for c in labels_per_cell:
@@ -293,9 +308,13 @@ class GridMap:
                 crimes_with_label.append(j)
             block_label+=1
 
+        for cells in crimes_with_label:
+            cell = cells[0]
+            self.grid[cell[0]][cell[1]]['Label'] = cells[2]
+
         return crimes_with_label
 
-    def set_labels(self, labelslist):
+    def set_grid_labels(self, labelslist):
         self.labels = labelslist
 
     def gen_pointlist_from_dir(self, path, tot='all', filename="pointListFromDir.list", metacheck=True):
@@ -306,22 +325,33 @@ class GridMap:
             file_list = sorted(os.listdir(imagepath))
         except:
             file_list = sorted(os.listdir(path))
-            
+        
+        fw = open(filename, 'w')
+        fw1 = open('removed_' + filename + '.log', 'w')
+        fw2 = open('damaged_' + filename + '.log', 'w')
+
         latlons = list()
         for imagename in file_list:
-            slices = imagename.split('_')
-            if len(slices) > 3:
-                line = slices[0]
-                lat = slices[1]
-                lon = slices[2]
-            elif len(slices) == 3:
-                line = None
-                lat = slices[0]
-                lon = slices[1]
-            else:
-                sys.exit("Wrong file name format: accept only [line_lat_lon_cam] or [lat_lon_cam]")
-            
-            latlons.append((line, lat, lon))
+            #Try opening the image
+            try:
+                image = imread(imagename)
+                if(len(image.shape)==3):
+                    slices = imagename.split('_')
+                    if len(slices) > 3:
+                        line = slices[0]
+                        lat = slices[1]
+                        lon = slices[2]
+                    elif len(slices) == 3:
+                        line = None
+                        lat = slices[0]
+                        lon = slices[1]
+                    else:
+                        sys.exit("Wrong file name format: accept only [line_lat_lon_cam] or [lat_lon_cam]")
+                    
+                    latlons.append((line, lat, lon))
+            except:
+                fw2.write(imagename +  '\n')
+
         
         latlons = list(set(latlons))
 
@@ -329,13 +359,11 @@ class GridMap:
             lim = tot
         else:
             lim = len(latlons)
-
-        fw = open(filename, 'w')
-        fw1 = open('removed_' + filename + '.log', 'w')
         
         for point in latlons[:lim]:
             status = list()
 
+            #Check metafile for OK status in images
             if metacheck == True:
                 for c in ['0', '90', '180', '270']:
                     try:
@@ -351,16 +379,10 @@ class GridMap:
                 fw.write(point[1] + ',' + point[2] + '\n')
             else:
                 fw1.write(str(status) +  '\n')
-
-
-        
-        # fw = open(filename, 'w')
-        # for point in latlons[:lim]:
-        #     fw.write(point[1] + ',' + point[2] + '\n')
-
+      
         fw.close()
         fw1.close()
-        # return latlons[:lim]
+        fw2.close()
 
     def set_labels_per_cell(self, lowercell, uppercell, label, train_or_test):
         for l in range(lowercell[0], uppercell[0]+1):
@@ -379,7 +401,7 @@ class GridMap:
     #             fw.write(str(point[0]) + ',' + str(point[1]) + ',' + str(cell['label']) + ',' + str(cell['train_or_test']) + '\n')
     #     fw.close()
 
-    def copy_images_to_dir(self, sourcepath, destinypath, filenameListFromDir):
+    def copy_images_to_dir(self, sourcepath, destinypath, filenameListFromDir, borderline=False):
         fr = open(filenameListFromDir, 'r')
         pointListFromDir = fr.readlines()
         for point in pointListFromDir:
@@ -391,12 +413,29 @@ class GridMap:
             else:
                 train_or_test = self.grid[cell[0]][cell[1]]['train_or_test']
                 label = self.grid[cell[0]][cell[1]]['label']
+
+                # Test if point is above borderlines 
+                if borderline == True:
+                    if (lon == self.grid[cell[0]][cell[1]]['leftlon']) and (lat >= self.grid[cell[0]][cell[1]]['lowerlat']) and (lat <= self.grid[cell[0]][cell[1]]['upperlat']):
+                        online = True
+                    elif (lon == self.grid[cell[0]][cell[1]]['rightlon']) and (lat >= self.grid[cell[0]][cell[1]]['lowerlat']) and (lat <= self.grid[cell[0]][cell[1]]['upperlat']):
+                        online = True
+                    elif (lat == self.grid[cell[0]][cell[1]]['lowerlat']) and (lon >= grid[cell[0]][cell[1]]['rightlon']) and (lon <= grid[cell[0]][cell[1]]['leftlon']):
+                        online = True
+                    elif (lat == self.grid[cell[0]][cell[1]]['upperlat']) and (lon >= grid[cell[0]][cell[1]]['rightlon']) and (lon <= grid[cell[0]][cell[1]]['leftlon']):
+                        online = True
+                    else:
+                        online = False
+                else:
+                    online = False
+
                 if train_or_test != None or label != None:
                     for c in ['0', '90', '180', '270']:
-                        try:
-                            copy2(sourcepath + '/' + str(lat) + "_" + str(lon) + "_" + c + '.jpg', destinypath + '/' + str(train_or_test) + '/' + str(label) + '/')
-                        except:
-                            print("Could not copy file ", sourcepath + '/' + str(lat) + "_" + str(lon) + "_" + c + '.jpg', destinypath + '/' + str(train_or_test) + '/' + str(label) + '/')
+                        if online == False:
+                            try:
+                                copy2(sourcepath + '/' + str(lat) + "_" + str(lon) + "_" + c + '.jpg', destinypath + '/' + str(train_or_test) + '/' + str(label) + '/')
+                            except:
+                                print("Could not copy file ", sourcepath + '/' + str(lat) + "_" + str(lon) + "_" + c + '.jpg', destinypath + '/' + str(train_or_test) + '/' + str(label) + '/')
 
 
     def gen_imagelist_with_label(self, cell_path, crimes_with_label, filename="imageListLabels.list"):
