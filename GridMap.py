@@ -149,11 +149,11 @@ class GridMap:
                     minim = self.grid[l][c]['total_crimes']
                     all_min = self.grid[l][c]
         return all_min
-
-    def get_crime_by_cell(self, inTerritory=False):
+#TODO PAREI AWUI
+    def get_crime_by_cell(self, lowercell, uppercell, inTerritory=False):
         crime_by_cell = list()        
-        for l in range(0, self.step):
-            for c in range(0, self.step):
+        for l in range(lowercell[0], uppercell[0]+1):
+            for c in range(lowercell[1], uppercell[1]+1):
                 if inTerritory == True:
                     if self.grid[l][c]['in_territory'] == True:
                         crime_by_cell.append([(l, c), self.grid[l][c]['total_crimes']])
@@ -318,13 +318,17 @@ class GridMap:
         self.labels = labelslist
 
     def gen_pointlist_from_dir(self, path, tot='all', filename="pointListFromDir.list", metacheck=True):
-        imagepath = path + "/images"
-        metapath = path + "/meta"
+        if metacheck == False:
+            imagepath = path
+        else:
+            imagepath = path + "/images"
+            metapath = path + "/meta"
 
-        try:
-            file_list = sorted(os.listdir(imagepath))
-        except:
-            file_list = sorted(os.listdir(path))
+        # try:
+        #     file_list = sorted(os.listdir(imagepath))
+        # except:
+        #     file_list = sorted(os.listdir(path))
+        file_list = sorted(os.listdir(imagepath))
         
         fw = open(filename, 'w')
         fw1 = open('removed_' + filename + '.log', 'w')
@@ -334,7 +338,8 @@ class GridMap:
         for imagename in file_list:
             #Try opening the image
             try:
-                image = imread(imagename)
+                image = imread(imagepath + '/' + imagename)
+                
                 if(len(image.shape)==3):
                     slices = imagename.split('_')
                     if len(slices) > 3:
@@ -387,8 +392,10 @@ class GridMap:
     def set_labels_per_cell(self, lowercell, uppercell, label, train_or_test):
         for l in range(lowercell[0], uppercell[0]+1):
             for c in range(lowercell[1], uppercell[1]+1):
-                self.grid[l][c]['label'] = label
+                if label != "":
+                    self.grid[l][c]['label'] = label
                 self.grid[l][c]['train_or_test'] = train_or_test
+                    
 
     
     # def gen_point_labels(self, pointListFromDir, filename="pointsLabel.list"):
@@ -614,7 +621,7 @@ class GridMap:
 
         for l in range(0, self.step):
             for c in range(0, self.step):
-                if self.grid[l][c]['total_crimes'] > 0:
+                if self.grid[l][c]['total_crimes'] > 0 and self.grid[l][c]['in_territory'] == True:
                     left_lon1, right_lon1 = basemap([self.grid[l][c]['leftlon'], self.grid[l][c]['rightlon']], [self.grid[l][c]['lowerlat'], self.grid[l][c]['lowerlat']])
                     left_lon2, right_lon2 = basemap([self.grid[l][c]['leftlon'], self.grid[l][c]['rightlon']], [self.grid[l][c]['upperlat'], self.grid[l][c]['upperlat']])
                     low_lat1, up_lat1 = basemap([self.grid[l][c]['rightlon'], self.grid[l][c]['rightlon']], [self.grid[l][c]['lowerlat'], self.grid[l][c]['upperlat']])
