@@ -310,7 +310,7 @@ class GridMap:
 
         for cells in crimes_with_label:
             cell = cells[0]
-            self.grid[cell[0]][cell[1]]['Label'] = cells[2]
+            self.grid[cell[0]][cell[1]]['label'] = cells[2]
 
         return crimes_with_label
 
@@ -324,6 +324,7 @@ class GridMap:
             imagepath = path + "/images"
             metapath = path + "/meta"
 
+        print(imagepath)
         # try:
         #     file_list = sorted(os.listdir(imagepath))
         # except:
@@ -368,13 +369,13 @@ class GridMap:
                     if len(image.shape)!= 3 or image.shape[0] != 640 or image.shape[1] != 640:
                         allcamera.append(c)
                         fw2.write("channel or wrong shape," + str(imagepath) + '/' + str(point[1]) + '_' + str(point[2]) + '_' + c + '.jpg\n')
-                    if os.stat(str(imagepath) + '/' + str(point[1]) + '_' + str(point[2]) + '_' + c + '.jpg\n').st_size < 17000:
+                    if os.stat(str(imagepath) + '/' + str(point[1]) + '_' + str(point[2]) + '_' + c + '.jpg').st_size < 17000:
                         allcamera.append(c)
                         fw2.write("small size," + str(imagepath) + '/' + str(point[1]) + '_' + str(point[2]) + '_' + c + '.jpg\n')
 
                 except:
                     allcamera.append(c)
-                    fw2.write(str(imagepath) + '/' + str(point[1]) + '_' + str(point[2]) + '_' + c + '.jpg\n')
+                    fw2.write("Read error," +str(imagepath) + '/' + str(point[1]) + '_' + str(point[2]) + '_' + c + '.jpg\n')
 
             #Check metafile for OK status in images
             if metacheck == True:
@@ -391,7 +392,7 @@ class GridMap:
             if len(status) == 0 and len(allcamera) == 0:
                 fw.write(point[1] + ',' + point[2] + '\n')
             else:
-                fw1.write(str(status) +  '\n')
+                fw1.write("Status Not OK," + str(status) +  ',' + str(metapath) + '/' + str(point[1]) + '_' + str(point[2]) + '\n')
       
         fw.close()
         fw1.close()
@@ -428,7 +429,8 @@ class GridMap:
             else:
                 train_or_test = self.grid[cell[0]][cell[1]]['train_or_test']
                 label = self.grid[cell[0]][cell[1]]['label']
-
+                print("traintest",train_or_test)
+                print("label",label)
                 # Test if point is above borderlines 
                 if borderline == True:
                     if (lon == self.grid[cell[0]][cell[1]]['leftlon']) and (lat >= self.grid[cell[0]][cell[1]]['lowerlat']) and (lat <= self.grid[cell[0]][cell[1]]['upperlat']):
