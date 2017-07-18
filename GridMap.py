@@ -336,28 +336,20 @@ class GridMap:
 
         latlons = list()
         for imagename in file_list:
-            #Try opening the image
-            try:
-                image = imread(imagepath + '/' + imagename)
-                
-                if(len(image.shape)==3):
-                    slices = imagename.split('_')
-                    if len(slices) > 3:
-                        line = slices[0]
-                        lat = slices[1]
-                        lon = slices[2]
-                    elif len(slices) == 3:
-                        line = None
-                        lat = slices[0]
-                        lon = slices[1]
-                    else:
-                        sys.exit("Wrong file name format: accept only [line_lat_lon_cam] or [lat_lon_cam]")
-                    
-                    latlons.append((line, lat, lon))
-            except:
-                fw2.write(imagename +  '\n')
-
-        
+            slices = imagename.split('_')
+            if len(slices) > 3:
+                line = slices[0]
+                lat = slices[1]
+                lon = slices[2]
+            elif len(slices) == 3:
+                line = None
+                lat = slices[0]
+                lon = slices[1]
+            else:
+                sys.exit("Wrong file name format: accept only [line_lat_lon_cam] or [lat_lon_cam]")
+            
+            latlons.append((line, lat, lon))
+            
         latlons = list(set(latlons))
 
         if tot != 'all':
@@ -366,7 +358,23 @@ class GridMap:
             lim = len(latlons)
         
         for point in latlons[:lim]:
+            allcamera = list()
             status = list()
+
+            #Check if all camera views are present, can read, shape and dimensions
+            for c in ['0', '90', '180', '270']:
+                try:
+                    image = imread(str(imagepath) + '/' + str(point[1]) + '_' + str(point[2]) + '_' + c + '.jpg')
+                    if len(image.shape)!= 3 or image.shape[0] != 640 or image.shape[1] != 640:
+                        allcamera.append(c)
+                        fw2.write("channel or wrong shape," + str(imagepath) + '/' + str(point[1]) + '_' + str(point[2]) + '_' + c + '.jpg\n')
+                    if os.stat(str(imagepath) + '/' + str(point[1]) + '_' + str(point[2]) + '_' + c + '.jpg\n').st_size < 17000:
+                        allcamera.append(c)
+                        fw2.write("small size," + str(imagepath) + '/' + str(point[1]) + '_' + str(point[2]) + '_' + c + '.jpg\n')
+
+                except:
+                    allcamera.append(c)
+                    fw2.write(str(imagepath) + '/' + str(point[1]) + '_' + str(point[2]) + '_' + c + '.jpg\n')
 
             #Check metafile for OK status in images
             if metacheck == True:
@@ -380,7 +388,7 @@ class GridMap:
                         fw1.write("Not found: " + str(metapath) + '/' + str(point[1]) + '_' + str(point[2]) + '_' + c + '.txt\n')
                         pass
                 
-            if len(status) == 0:
+            if len(status) == 0 and len(allcamera) == 0:
                 fw.write(point[1] + ',' + point[2] + '\n')
             else:
                 fw1.write(str(status) +  '\n')
@@ -638,7 +646,8 @@ class GridMap:
                     
                     x, y, z = data.X.values, data.Y.values, data.Z.values
                     zi = griddata(x, y, z, xi, yi, interp='linear')
-                    cs = basemap.contourf(xi, yi, zi, vmin=1, vmax=self.get_max_crimes()['total_crimes'], alpha=0.5)
+                    cs = basemap.contourf(xi, yi, zi, vmin=1, vmax=self.get_max_crimes()['total_crimes'], cmap = plt.cm.jet, alpha=0.5)
+                    
 
     def street_points(self, basemap, corner_list, interpol_list, cmark='g', imark='b'):
         #corner_list, interpol_list = lat, lon
