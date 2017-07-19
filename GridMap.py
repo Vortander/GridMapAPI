@@ -48,6 +48,30 @@ def _on_line(lat1, lon1, lat2, lon2, lat_test, lon_test):
     else:
         return False
 
+# From https://gis.stackexchange.com/questions/11409/calculating-the-distance-between-a-point-and-a-virtual-line-of-two-lat-lngs
+def _get_perp( x1, y1, x2, y2, x, y):
+    """************************************************************************************************ 
+    Purpose - x1,y1,x2,y2 = Two points representing the ends of the line segment
+              x, y = The offset point 
+    'Returns - (x4, y4) = Returns the Point on the line perpendicular to the offset or None if no such
+                        point exists
+    '************************************************************************************************ """
+    xx = x2 - x1 
+    yy = y2 - y1 
+    shortest_length = ((xx * (x - x1)) + (yy * (y - y1))) / ((xx * xx) + (yy * yy)) 
+    x4 = x1 + xx * shortest_length 
+    y4 = y1 + yy * shortest_length
+    if x4 < x2 and x4 > x1 and y4 < y2 and y4 > y1:
+        return (x4, y4)
+    return None
+
+def _near_line(x1, y1, x2, y2, x3, y3):
+    cpoint = _get_perp(x1, y1, x2, y2, x3, y3)
+    if cpoint != None:
+        if _haversine(cpoint[0], cpoint[1], x3, y3) <= 0.1:
+            return True
+    
+    return False
 
 class Window:
 
@@ -318,8 +342,10 @@ class GridMap:
         self.labels = labelslist
 
     def gen_pointlist_from_dir(self, path, tot='all', filename="pointListFromDir.list", metacheck=True):
+        print(metacheck)
         if metacheck == False:
             imagepath = path
+            metapath = ""
         else:
             imagepath = path + "/images"
             metapath = path + "/meta"
@@ -418,8 +444,11 @@ class GridMap:
     #     fw.close()
 
     def copy_images_to_dir(self, sourcepath, destinypath, filenameListFromDir, borderline=False):
+        
+        online = False
         fr = open(filenameListFromDir, 'r')
         pointListFromDir = fr.readlines()
+        fw = open(filenameListFromDir + '_copy.log', 'w')
         for point in pointListFromDir:
             point = point.replace("\n","")
             lat, lon = point.split(',')
@@ -429,30 +458,33 @@ class GridMap:
             else:
                 train_or_test = self.grid[cell[0]][cell[1]]['train_or_test']
                 label = self.grid[cell[0]][cell[1]]['label']
-                print("traintest",train_or_test)
-                print("label",label)
+                
                 # Test if point is above borderlines 
                 if borderline == True:
-                    if (lon == self.grid[cell[0]][cell[1]]['leftlon']) and (lat >= self.grid[cell[0]][cell[1]]['lowerlat']) and (lat <= self.grid[cell[0]][cell[1]]['upperlat']):
+                    if _near_line( self.grid[cell[0]][cell[1]]['leftlon'], self.grid[cell[0]][cell[1]]['upperlat'], self.grid[cell[0]][cell[1]]['leftlon'], self.grid[cell[0]][cell[1]]['lowerlat'], lon, lat):
                         online = True
-                    elif (lon == self.grid[cell[0]][cell[1]]['rightlon']) and (lat >= self.grid[cell[0]][cell[1]]['lowerlat']) and (lat <= self.grid[cell[0]][cell[1]]['upperlat']):
+                    
+                    elif _near_line( self.grid[cell[0]][cell[1]]['rightlon'], self.grid[cell[0]][cell[1]]['upperlat'], self.grid[cell[0]][cell[1]]['rightlon'], self.grid[cell[0]][cell[1]]['lowerlat'], lon, lat):
                         online = True
-                    elif (lat == self.grid[cell[0]][cell[1]]['lowerlat']) and (lon >= grid[cell[0]][cell[1]]['rightlon']) and (lon <= grid[cell[0]][cell[1]]['leftlon']):
+
+                    elif _near_line( self.grid[cell[0]][cell[1]]['rightlon'],  self.grid[cell[0]][cell[1]]['lowerlat'], self.grid[cell[0]][cell[1]]['leftlon'], self.grid[cell[0]][cell[1]]['lowerlat'], lat, lon):
                         online = True
-                    elif (lat == self.grid[cell[0]][cell[1]]['upperlat']) and (lon >= grid[cell[0]][cell[1]]['rightlon']) and (lon <= grid[cell[0]][cell[1]]['leftlon']):
+
+                    elif _near_line( self.grid[cell[0]][cell[1]]['rightlon'], self.grid[cell[0]][cell[1]]['upperlat'], self.grid[cell[0]][cell[1]]['leftlon'], self.grid[cell[0]][cell[1]]['upperlat'], lon, lat):
                         online = True
+                    
                     else:
                         online = False
-                else:
-                    online = False
-
+                    
                 if train_or_test != None or label != None:
                     for c in ['0', '90', '180', '270']:
                         if online == False:
                             try:
                                 copy2(sourcepath + '/' + str(lat) + "_" + str(lon) + "_" + c + '.jpg', destinypath + '/' + str(train_or_test) + '/' + str(label) + '/')
                             except:
-                                print("Could not copy file ", sourcepath + '/' + str(lat) + "_" + str(lon) + "_" + c + '.jpg', destinypath + '/' + str(train_or_test) + '/' + str(label) + '/')
+                                fw.write("Could not copy file, " + sourcepath + '/' + str(lat) + "_" + str(lon) + "_" + c + '.jpg' + " " + destinypath + '/' + str(train_or_test) + '/' + str(label) + '\n')
+        fw.close()
+        fr.close()
 
 
     def gen_imagelist_with_label(self, cell_path, crimes_with_label, filename="imageListLabels.list"):
@@ -631,7 +663,7 @@ class GridMap:
 
         for l in range(0, self.step):
             for c in range(0, self.step):
-                if self.grid[l][c]['total_crimes'] > 0 and self.grid[l][c]['in_territory'] == True:
+                if self.grid[l][c]['total_crimes'] > 0:
                     left_lon1, right_lon1 = basemap([self.grid[l][c]['leftlon'], self.grid[l][c]['rightlon']], [self.grid[l][c]['lowerlat'], self.grid[l][c]['lowerlat']])
                     left_lon2, right_lon2 = basemap([self.grid[l][c]['leftlon'], self.grid[l][c]['rightlon']], [self.grid[l][c]['upperlat'], self.grid[l][c]['upperlat']])
                     low_lat1, up_lat1 = basemap([self.grid[l][c]['rightlon'], self.grid[l][c]['rightlon']], [self.grid[l][c]['lowerlat'], self.grid[l][c]['upperlat']])
