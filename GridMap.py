@@ -66,7 +66,7 @@ def _get_perp( x1, y1, x2, y2, x, y):
     return None
 
 def _near_line(x1, y1, x2, y2, x3, y3):
-    cpoint = _get_perp(x1, y1, x2, y2, x3, y3)
+    cpoint = _get_perp(float(x1), float(y1), float(x2), float(y2), float(x3), float(y3))
     if cpoint != None:
         if _haversine(cpoint[0], cpoint[1], x3, y3) <= 0.1:
             return True
