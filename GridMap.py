@@ -57,18 +57,26 @@ def _get_perp( x1, y1, x2, y2, x, y):
                         point exists
     '************************************************************************************************ """
     xx = x2 - x1 
-    yy = y2 - y1 
+    yy = y2 - y1
+    #print(xx, yy)
+    #print("Original ", x, y)
     shortest_length = ((xx * (x - x1)) + (yy * (y - y1))) / ((xx * xx) + (yy * yy)) 
     x4 = x1 + xx * shortest_length 
     y4 = y1 + yy * shortest_length
-    if x4 < x2 and x4 > x1 and y4 < y2 and y4 > y1:
+    #print("C ", x4, y4)
+    if (x4 <= x2) and (x4 >= x1) and (y4 <= y2) and (y4 >= y1):
         return (x4, y4)
     return None
 
-def _near_line(x1, y1, x2, y2, x3, y3):
+def _near_line(x2, y2, x1, y1, x3, y3, meters):
     cpoint = _get_perp(float(x1), float(y1), float(x2), float(y2), float(x3), float(y3))
+    #print("point ", cpoint)
     if cpoint != None:
-        if _haversine(cpoint[0], cpoint[1], x3, y3) <= 0.1:
+        #print(cpoint[0])
+        #print(x3, y3)
+        distance = _haversine(cpoint[0], cpoint[1], float(x3), float(y3))
+        #print("distance ", distance)
+        if distance <= meters:
             return True
     
     return False
@@ -461,24 +469,14 @@ class GridMap:
                 
                 # Test if point is above borderlines 
                 if borderline == True:
-                    if _near_line( self.grid[cell[0]][cell[1]]['leftlon'], self.grid[cell[0]][cell[1]]['upperlat'], self.grid[cell[0]][cell[1]]['leftlon'], self.grid[cell[0]][cell[1]]['lowerlat'], lon, lat):
-                        online = True
-                    
-                    elif _near_line( self.grid[cell[0]][cell[1]]['rightlon'], self.grid[cell[0]][cell[1]]['upperlat'], self.grid[cell[0]][cell[1]]['rightlon'], self.grid[cell[0]][cell[1]]['lowerlat'], lon, lat):
-                        online = True
-
-                    elif _near_line( self.grid[cell[0]][cell[1]]['rightlon'],  self.grid[cell[0]][cell[1]]['lowerlat'], self.grid[cell[0]][cell[1]]['leftlon'], self.grid[cell[0]][cell[1]]['lowerlat'], lat, lon):
-                        online = True
-
-                    elif _near_line( self.grid[cell[0]][cell[1]]['rightlon'], self.grid[cell[0]][cell[1]]['upperlat'], self.grid[cell[0]][cell[1]]['leftlon'], self.grid[cell[0]][cell[1]]['upperlat'], lon, lat):
-                        online = True
-                    
-                    else:
-                        online = False
-                    
+                    border1_online = _near_line( self.grid[cell[0]][cell[1]]['leftlon'], self.grid[cell[0]][cell[1]]['upperlat'], self.grid[cell[0]][cell[1]]['leftlon'], self.grid[cell[0]][cell[1]]['lowerlat'], lon, lat, 0.2)
+                    border2_online = _near_line( self.grid[cell[0]][cell[1]]['rightlon'], self.grid[cell[0]][cell[1]]['upperlat'], self.grid[cell[0]][cell[1]]['rightlon'], self.grid[cell[0]][cell[1]]['lowerlat'], lon, lat, 0.2)
+                    border3_online = _near_line( self.grid[cell[0]][cell[1]]['rightlon'],  self.grid[cell[0]][cell[1]]['lowerlat'], self.grid[cell[0]][cell[1]]['leftlon'], self.grid[cell[0]][cell[1]]['lowerlat'], lat, lon, 0.2)
+                    border4_online = _near_line( self.grid[cell[0]][cell[1]]['rightlon'], self.grid[cell[0]][cell[1]]['upperlat'], self.grid[cell[0]][cell[1]]['leftlon'], self.grid[cell[0]][cell[1]]['upperlat'], lon, lat, 0.2)
+                
                 if train_or_test != None or label != None:
-                    for c in ['0', '90', '180', '270']:
-                        if online == False:
+                   if (border1_online or border2_online or border3_online or border4_online) == False:
+                       for c in ['0', '90', '180', '270']:
                             try:
                                 copy2(sourcepath + '/' + str(lat) + "_" + str(lon) + "_" + c + '.jpg', destinypath + '/' + str(train_or_test) + '/' + str(label) + '/')
                             except:
