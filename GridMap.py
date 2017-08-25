@@ -493,13 +493,13 @@ class GridMap:
     #     fw.close()
 
     def _near_line(self, x2, y2, x1, y1, x3, y3, meters):
-    cpoint = _get_perp(float(x1), float(y1), float(x2), float(y2), float(x3), float(y3))
-    if cpoint != None:
-        distance = _haversine(cpoint[0], cpoint[1], float(x3), float(y3))
-        if distance <= meters:
-            return True
-    
-    return False
+        cpoint = _get_perp(float(x1), float(y1), float(x2), float(y2), float(x3), float(y3))
+        if cpoint != None:
+            distance = _haversine(cpoint[0], cpoint[1], float(x3), float(y3))
+            if distance <= meters:
+                return True
+        
+        return False
 
     def copy_images_to_dir(self, sourcepath, destinypath, filenameListFromDir, borderline=False):
         
