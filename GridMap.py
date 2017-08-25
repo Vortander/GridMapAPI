@@ -48,34 +48,20 @@ def _on_line(lat1, lon1, lat2, lon2, lat_test, lon_test):
     else:
         return False
 
-# From https://gis.stackexchange.com/questions/11409/calculating-the-distance-between-a-point-and-a-virtual-line-of-two-lat-lngs
 def _get_perp( x1, y1, x2, y2, x, y):
-    """************************************************************************************************ 
-    Purpose - x1,y1,x2,y2 = Two points representing the ends of the line segment
-              x, y = The offset point 
-    'Returns - (x4, y4) = Returns the Point on the line perpendicular to the offset or None if no such
-                        point exists
-    '************************************************************************************************ """
     xx = x2 - x1 
     yy = y2 - y1
-    #print(xx, yy)
-    #print("Original ", x, y)
     shortest_length = ((xx * (x - x1)) + (yy * (y - y1))) / ((xx * xx) + (yy * yy)) 
     x4 = x1 + xx * shortest_length 
     y4 = y1 + yy * shortest_length
-    #print("C ", x4, y4)
     if (x4 <= x2) and (x4 >= x1) and (y4 <= y2) and (y4 >= y1):
         return (x4, y4)
     return None
 
 def _near_line(x2, y2, x1, y1, x3, y3, meters):
     cpoint = _get_perp(float(x1), float(y1), float(x2), float(y2), float(x3), float(y3))
-    #print("point ", cpoint)
     if cpoint != None:
-        #print(cpoint[0])
-        #print(x3, y3)
         distance = _haversine(cpoint[0], cpoint[1], float(x3), float(y3))
-        #print("distance ", distance)
         if distance <= meters:
             return True
     
@@ -323,8 +309,37 @@ class GridMap:
     def set_window(self, windowstruct):
         self.window = windowstruct
 
+
+    def set_labels_with_threshold(self, crimes_cell_list, label_list, min_crimes=2):
+        #TODO: works only for binary classification
+        for cells in crimes_cell_list:
+            num_crimes = cells[1]
+
+            if num_crimes > min_crimes:
+                self.grid[cells[0][0]][cells[0][1]]['label'] = label_list[1]
+            else:
+                self.grid[cells[0][0]][cells[0][1]]['label'] = label_list[0]
+
+            print(cells[0], cells[1], self.grid[cells[0][0]][cells[0][1]]['label'])
+
+    def count_labels(self, lowercell, uppercell, label_list):
+        #TODO: works only for binary classification
+        label_count = {}
+        label_count[label_list[0]] = 0
+        label_count[label_list[1]] = 0
+        for l in range(lowercell[0], uppercell[0]+1):
+            for c in range(lowercell[1], uppercell[1]+1):
+                if self.grid[l][c]['label'] == label_list[0]:
+                    label_count[label_list[0]] += 1
+                elif self.grid[l][c]['label'] == label_list[1]:
+                    label_count[label_list[1]] += 1
+
+        return label_count
+
+
     def set_labels_per_range(self, crimes_cell_list, label_list):
-        crimes_list = crimes_cell_list.copy()
+
+        crimes_list = crimes_cell_list[:]
         crimes_with_label = list()
         crimes_list = sorted(crimes_list, key = lambda x: int(x[1]))
 
@@ -332,19 +347,45 @@ class GridMap:
         block_label = 0
         for i in range(n, 0, -1):
             group = round(len(crimes_list)/i)
-            c = crimes_list[:group]
-            crimes_list = crimes_list[group:]
+            c = crimes_list[:int(group)]
+            crimes_list = crimes_list[int(group):]
             for j in c:
                 j.append(label_list[block_label])
-                print(j)
                 crimes_with_label.append(j)
             block_label+=1
 
         for cells in crimes_with_label:
             cell = cells[0]
             self.grid[cell[0]][cell[1]]['label'] = cells[2]
-
+    
         return crimes_with_label
+
+    def set_train_test_distribution(self, crimes_cell_list, slices=4, train_size=0.7):
+        range_distribution = {'train': list(), 'test': list()} 
+        crimes_list = crimes_cell_list[:]
+        crimes_with_label = list()
+       
+        for i in range(slices, 0, -1):
+            group = round(len(crimes_list)/i)
+            c = crimes_list[:int(group)]
+            crimes_list = crimes_list[int(group):]
+            #split c block in train and test
+            train = round(len(c) * train_size)
+            test = len(c) - train
+            trainset = c[:int(train)]
+            testset = c[int(train):len(c)]
+            
+            for item in trainset:
+                cell = item[0]
+                self.grid[cell[0]][cell[1]]['train_or_test'] = 'train'
+                range_distribution['train'].append((cell, self.grid[cell[0]][cell[1]]['total_crimes'], self.grid[cell[0]][cell[1]]['train_or_test']))
+     
+            for item in testset:
+                cell = item[0]
+                self.grid[cell[0]][cell[1]]['train_or_test'] = 'test'
+                range_distribution['test'].append((cell, self.grid[cell[0]][cell[1]]['total_crimes'], self.grid[cell[0]][cell[1]]['train_or_test']))
+
+        return range_distribution
 
     def set_grid_labels(self, labelslist):
         self.labels = labelslist
@@ -539,6 +580,20 @@ class GridMap:
 
         return pointlist
 
+    def get_attr_distribuition(self, order='dsc'):
+        distribution = list()
+        for l in range(0, self.step):
+            for c in range(0, self.step):
+                if self.grid[l][c]['in_territory'] == True:
+                    distribution.append([(l, c), self.grid[l][c]['total_crimes']])
+
+        if order=='asc':
+            reverse = False
+        elif order=='dsc':
+            reverse = True
+
+        return sorted(distribution, key=lambda x: x[1], reverse=reverse)
+
 # TODO: Add parameter fromJson = True -> and trainsform key in str: images_dict[label][str(i)][0][1]
     def gen_train_test(self, images_dict, source_path, destiny_path, maxfiles, trainpercent):
         lenght_per_labels = {}
@@ -606,6 +661,8 @@ class GridMap:
             return True
         except:
             return "Error while loading file."
+
+
 
 
 
@@ -719,7 +776,7 @@ class GridMap:
 
         basemap.scatter(lons, lats, marker='+', color=color)
 
-    def event_points(self, basemap, pointlist):
+    def event_points(self, basemap, pointlist, marker='D', color='m'):
         self.plot_grid(basemap, 0, 1.0)
         lons = []
         lats = [] 
@@ -728,7 +785,7 @@ class GridMap:
             lons.append(lon)
             lats.append(lat)
 
-        basemap.scatter(lons, lats, marker='D', color='r')
+        basemap.scatter(lons, lats, marker=marker, color=color)
 
     def mark_cells(self, basemap, lowercell, uppercell, color='r'):
         self.plot_grid(basemap, 0, 1.0)
