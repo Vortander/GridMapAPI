@@ -492,6 +492,15 @@ class GridMap:
     #             fw.write(str(point[0]) + ',' + str(point[1]) + ',' + str(cell['label']) + ',' + str(cell['train_or_test']) + '\n')
     #     fw.close()
 
+    def _near_line(self, x2, y2, x1, y1, x3, y3, meters):
+    cpoint = _get_perp(float(x1), float(y1), float(x2), float(y2), float(x3), float(y3))
+    if cpoint != None:
+        distance = _haversine(cpoint[0], cpoint[1], float(x3), float(y3))
+        if distance <= meters:
+            return True
+    
+    return False
+
     def copy_images_to_dir(self, sourcepath, destinypath, filenameListFromDir, borderline=False):
         
         online = False
@@ -510,10 +519,10 @@ class GridMap:
                 
                 # Test if point is above borderlines 
                 if borderline == True:
-                    border1_online = _near_line( self.grid[cell[0]][cell[1]]['leftlon'], self.grid[cell[0]][cell[1]]['upperlat'], self.grid[cell[0]][cell[1]]['leftlon'], self.grid[cell[0]][cell[1]]['lowerlat'], lon, lat, 0.2)
-                    border2_online = _near_line( self.grid[cell[0]][cell[1]]['rightlon'], self.grid[cell[0]][cell[1]]['upperlat'], self.grid[cell[0]][cell[1]]['rightlon'], self.grid[cell[0]][cell[1]]['lowerlat'], lon, lat, 0.2)
-                    border3_online = _near_line( self.grid[cell[0]][cell[1]]['rightlon'],  self.grid[cell[0]][cell[1]]['lowerlat'], self.grid[cell[0]][cell[1]]['leftlon'], self.grid[cell[0]][cell[1]]['lowerlat'], lat, lon, 0.2)
-                    border4_online = _near_line( self.grid[cell[0]][cell[1]]['rightlon'], self.grid[cell[0]][cell[1]]['upperlat'], self.grid[cell[0]][cell[1]]['leftlon'], self.grid[cell[0]][cell[1]]['upperlat'], lon, lat, 0.2)
+                    border1_online = self._near_line( self.grid[cell[0]][cell[1]]['leftlon'], self.grid[cell[0]][cell[1]]['upperlat'], self.grid[cell[0]][cell[1]]['leftlon'], self.grid[cell[0]][cell[1]]['lowerlat'], lon, lat, 0.2)
+                    border2_online = self._near_line( self.grid[cell[0]][cell[1]]['rightlon'], self.grid[cell[0]][cell[1]]['upperlat'], self.grid[cell[0]][cell[1]]['rightlon'], self.grid[cell[0]][cell[1]]['lowerlat'], lon, lat, 0.2)
+                    border3_online = self._near_line( self.grid[cell[0]][cell[1]]['rightlon'],  self.grid[cell[0]][cell[1]]['lowerlat'], self.grid[cell[0]][cell[1]]['leftlon'], self.grid[cell[0]][cell[1]]['lowerlat'], lat, lon, 0.2)
+                    border4_online = self._near_line( self.grid[cell[0]][cell[1]]['rightlon'], self.grid[cell[0]][cell[1]]['upperlat'], self.grid[cell[0]][cell[1]]['leftlon'], self.grid[cell[0]][cell[1]]['upperlat'], lon, lat, 0.2)
                 
                 if train_or_test != None or label != None:
                    if (border1_online or border2_online or border3_online or border4_online) == False:
