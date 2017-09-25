@@ -180,8 +180,15 @@ class GridMap:
 
         return crime_by_cell
 
-    def set_borders(self, basemap, shapearray, force=False):
+    def set_borders(self, basemap, shapearray, force=False, key=None, value=None, shapeinfo=None):
         in_borders = []
+        defined_shape = []
+        point_list = []
+
+        for l in range(0, self.step):
+            for c in range(0, self.step):
+                point_list.append((l, c))
+
         if force == True:
             for l in range(0, self.step):
                 for c in range(0, self.step):
@@ -189,17 +196,47 @@ class GridMap:
                     in_borders.append((l, c))
 
         else:
-            for l in range(0, self.step):
-                for c in range(0, self.step):
+            if key != None and value != None and shapeinfo != None:
+                for info, shape in zip(shapeinfo, shapearray):
+                    if info[key] == value:
+                        defined_shape.append(shape)
+
+                for l, c in point_list:
                     x, y = basemap(self.grid[l][c]['centroid'][0], self.grid[l][c]['centroid'][1])
-                    for shape in shapearray:
-                        pt = Point(x, y)
+                    pt = Point(x, y)
+                    
+                    for shape in defined_shape:
                         poly = Polygon(shape)
                         if pt.within(poly) == True:
                             in_borders.append((l, c))
                             self.grid[l][c]['in_territory'] = True
-                        #else:
-                        #    self.grid[l][c]['in_territory'] = False
+                        else:
+                            self.grid[l][c]['in_territory'] = False
+                        
+
+
+        #     for l in range(0, self.step):
+        #         for c in range(0, self.step):
+        #             x, y = basemap(self.grid[l][c]['centroid'][0], self.grid[l][c]['centroid'][1])
+        #             if key != None and value != None and shapeinfo != None:
+        #                 for info, shape in zip(shapeinfo, shapearray):
+        #                     if info[key] == value:
+        #                         pt = Point(x, y)
+        #                         poly = Polygon(shape)
+        #                         if pt.within(poly) == True:
+        #                             in_borders.append((l, c))
+        #                             self.grid[l][c]['in_territory'] = True
+        #                         else:
+        #                             self.grid[l][c]['in_territory'] = False
+        #             else:
+        #                 for shape in shapearray:
+        #                     pt = Point(x, y)
+        #                     poly = Polygon(shape)
+        #                     if pt.within(poly) == True:
+        #                         in_borders.append((l, c))
+        #                         self.grid[l][c]['in_territory'] = True
+        #                     else:
+        #                         self.grid[l][c]['in_territory'] = False
 
         return in_borders
 
@@ -728,23 +765,24 @@ class GridMap:
         for l in range(0, self.step):
             for c in range(0, self.step):
                 if self.grid[l][c]['total_crimes'] > 0:
-                    left_lon1, right_lon1 = basemap([self.grid[l][c]['leftlon'], self.grid[l][c]['rightlon']], [self.grid[l][c]['lowerlat'], self.grid[l][c]['lowerlat']])
-                    left_lon2, right_lon2 = basemap([self.grid[l][c]['leftlon'], self.grid[l][c]['rightlon']], [self.grid[l][c]['upperlat'], self.grid[l][c]['upperlat']])
-                    low_lat1, up_lat1 = basemap([self.grid[l][c]['rightlon'], self.grid[l][c]['rightlon']], [self.grid[l][c]['lowerlat'], self.grid[l][c]['upperlat']])
-                    low_lat2, up_lat2 = basemap([self.grid[l][c]['leftlon'], self.grid[l][c]['leftlon']], [self.grid[l][c]['upperlat'], self.grid[l][c]['lowerlat']])
-                    
-                    data = pd.DataFrame([(left_lon1[0], right_lon1[0], self.grid[l][c]['total_crimes']),
-                                        (low_lat1[1], up_lat1[1], self.grid[l][c]['total_crimes']),
-                                        (low_lat2[0], up_lat2[0], self.grid[l][c]['total_crimes']),
-                                        (low_lat1[0], up_lat1[0], self.grid[l][c]['total_crimes'])], columns=list('XYZ'))
-                    numcols, numrows = self.step + 2, self.step + 2
-                    xi = np.linspace(data.X.min(), data.X.max(), numcols)
-                    yi = np.linspace(data.Y.min(), data.Y.max(), numrows)
-                    xi, yi = np.meshgrid(xi, yi)
-                    
-                    x, y, z = data.X.values, data.Y.values, data.Z.values
-                    zi = griddata(x, y, z, xi, yi, interp='linear')
-                    cs = basemap.contourf(xi, yi, zi, vmin=1, vmax=self.get_max_crimes()['total_crimes'], cmap = plt.cm.jet, alpha=0.5)
+                    if self.grid[l][c]['in_territory'] == True:
+                        left_lon1, right_lon1 = basemap([self.grid[l][c]['leftlon'], self.grid[l][c]['rightlon']], [self.grid[l][c]['lowerlat'], self.grid[l][c]['lowerlat']])
+                        left_lon2, right_lon2 = basemap([self.grid[l][c]['leftlon'], self.grid[l][c]['rightlon']], [self.grid[l][c]['upperlat'], self.grid[l][c]['upperlat']])
+                        low_lat1, up_lat1 = basemap([self.grid[l][c]['rightlon'], self.grid[l][c]['rightlon']], [self.grid[l][c]['lowerlat'], self.grid[l][c]['upperlat']])
+                        low_lat2, up_lat2 = basemap([self.grid[l][c]['leftlon'], self.grid[l][c]['leftlon']], [self.grid[l][c]['upperlat'], self.grid[l][c]['lowerlat']])
+                        
+                        data = pd.DataFrame([(left_lon1[0], right_lon1[0], self.grid[l][c]['total_crimes']),
+                                            (low_lat1[1], up_lat1[1], self.grid[l][c]['total_crimes']),
+                                            (low_lat2[0], up_lat2[0], self.grid[l][c]['total_crimes']),
+                                            (low_lat1[0], up_lat1[0], self.grid[l][c]['total_crimes'])], columns=list('XYZ'))
+                        numcols, numrows = self.step + 2, self.step + 2
+                        xi = np.linspace(data.X.min(), data.X.max(), numcols)
+                        yi = np.linspace(data.Y.min(), data.Y.max(), numrows)
+                        xi, yi = np.meshgrid(xi, yi)
+                        
+                        x, y, z = data.X.values, data.Y.values, data.Z.values
+                        zi = griddata(x, y, z, xi, yi, interp='linear')
+                        cs = basemap.contourf(xi, yi, zi, vmin=1, vmax=self.get_max_crimes()['total_crimes'], cmap = plt.cm.jet, alpha=0.5)
                     
 
     def street_points(self, basemap, corner_list, interpol_list, cmark='g', imark='b'):
@@ -795,6 +833,7 @@ class GridMap:
             lats.append(lat)
 
         basemap.scatter(lons, lats, marker=marker, color=color)
+
 
     def mark_cells(self, basemap, lowercell, uppercell, color='r'):
         self.plot_grid(basemap, 0, 1.0)
