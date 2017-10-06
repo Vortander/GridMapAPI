@@ -427,6 +427,34 @@ class GridMap:
     def set_grid_labels(self, labelslist):
         self.labels = labelslist
 
+    def gen_pointlist_from_shapefile(self, finalshape, interpolated, filename="pointListFromShapefile.list"):
+        # finalshape from self.convert_shape, interpolated from self.generate_inter_points
+        # format:
+        # corner_list = dictionary {line: [points]}
+        # interpol_list = tuple(dictionary {line: [points]}, diferences)
+        # return corner_list, interpol_list
+
+
+        corner_list = list()
+        interpol_list = list()
+
+        fw = open(filename, 'w')
+        for line in finalshape.keys():
+            for point in finalshape[line]:
+                corner_list.append(point)
+                fw.write(str(point) + '\n')
+        
+        for line in interpolated[0].keys():
+            for sect in interpolated[0][line]:
+                for point in sect:
+                    interpol_list.append(point)
+                    fw.write(str(point) + '\n')
+
+        fw.close()
+        return corner_list, interpol_list
+
+        
+
     def gen_pointlist_from_dir(self, path, tot='all', filename="pointListFromDir.list", metacheck=True):
         print(metacheck)
         if metacheck == False:
