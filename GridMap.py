@@ -586,7 +586,7 @@ class GridMap:
                 if borderline == True:
                     border1_online = self._near_line( self.grid[cell[0]][cell[1]]['leftlon'], self.grid[cell[0]][cell[1]]['upperlat'], self.grid[cell[0]][cell[1]]['leftlon'], self.grid[cell[0]][cell[1]]['lowerlat'], lon, lat, 0.2)
                     border2_online = self._near_line( self.grid[cell[0]][cell[1]]['rightlon'], self.grid[cell[0]][cell[1]]['upperlat'], self.grid[cell[0]][cell[1]]['rightlon'], self.grid[cell[0]][cell[1]]['lowerlat'], lon, lat, 0.2)
-                    border3_online = self._near_line( self.grid[cell[0]][cell[1]]['rightlon'],  self.grid[cell[0]][cell[1]]['lowerlat'], self.grid[cell[0]][cell[1]]['leftlon'], self.grid[cell[0]][cell[1]]['lowerlat'], lat, lon, 0.2)
+                    border3_online = self._near_line( self.grid[cell[0]][cell[1]]['rightlon'],  self.grid[cell[0]][cell[1]]['lowerlat'], self.grid[cell[0]][cell[1]]['leftlon'], self.grid[cell[0]][cell[1]]['lowerlat'], lon, lat, 0.2)
                     border4_online = self._near_line( self.grid[cell[0]][cell[1]]['rightlon'], self.grid[cell[0]][cell[1]]['upperlat'], self.grid[cell[0]][cell[1]]['leftlon'], self.grid[cell[0]][cell[1]]['upperlat'], lon, lat, 0.2)
                 
                 if train_or_test != None or label != None:
