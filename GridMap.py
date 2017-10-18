@@ -871,6 +871,23 @@ class GridMap:
                 basemap.plot(centroid[0], centroid[1], 'D', markersize=3.0, linewidth=3.0, color=color)
 
 
+    def show_info(self, basemap, position=True, attr_value=False):
+        self.plot_grid(basemap, 0, 1.0)
+        if position==True:
+            for l in range(0, self.step):
+                for c in range(0, self.step):
+                  lon, lat = basemap(self.grid[l][c]['centroid'][0], self.grid[l][c]['centroid'][1])
+                  plt.annotate((l,c), (lon, lat), size=8)
+
+        if attr_value==True:
+            for l in range(0, self.step):
+                for c in range(0, self.step):
+                  lon, lat = basemap(self.grid[l][c]['centroid'][0], self.grid[l][c]['centroid'][1])
+                  plt.annotate(self.grid[l][c]['total_crimes'], (lon, lat), size=8)
+
+
+
+
 
 
 
