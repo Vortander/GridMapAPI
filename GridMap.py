@@ -209,34 +209,9 @@ class GridMap:
                         poly = Polygon(shape)
                         if pt.within(poly) == True:
                             in_borders.append((l, c))
-                            self.grid[l][c]['in_territory'] = True
-                        else:
-                            self.grid[l][c]['in_territory'] = False
-                        
 
-
-        #     for l in range(0, self.step):
-        #         for c in range(0, self.step):
-        #             x, y = basemap(self.grid[l][c]['centroid'][0], self.grid[l][c]['centroid'][1])
-        #             if key != None and value != None and shapeinfo != None:
-        #                 for info, shape in zip(shapeinfo, shapearray):
-        #                     if info[key] == value:
-        #                         pt = Point(x, y)
-        #                         poly = Polygon(shape)
-        #                         if pt.within(poly) == True:
-        #                             in_borders.append((l, c))
-        #                             self.grid[l][c]['in_territory'] = True
-        #                         else:
-        #                             self.grid[l][c]['in_territory'] = False
-        #             else:
-        #                 for shape in shapearray:
-        #                     pt = Point(x, y)
-        #                     poly = Polygon(shape)
-        #                     if pt.within(poly) == True:
-        #                         in_borders.append((l, c))
-        #                         self.grid[l][c]['in_territory'] = True
-        #                     else:
-        #                         self.grid[l][c]['in_territory'] = False
+                for l, c in in_borders:
+                    self.grid[l][c]['in_territory'] = True    
 
         return in_borders
 
@@ -427,13 +402,12 @@ class GridMap:
     def set_grid_labels(self, labelslist):
         self.labels = labelslist
 
-    def gen_pointlist_from_shapefile(self, finalshape, interpolated, filename="pointListFromShapefile.list"):
+    def gen_pointlist_from_shapefile(self, finalshape, interpolated, filename="pointListFromShapefile.list", in_territory=False):
         # finalshape from self.convert_shape, interpolated from self.generate_inter_points
         # format:
         # corner_list = dictionary {line: [points]}
         # interpol_list = tuple(dictionary {line: [points]}, diferences)
         # return corner_list, interpol_list
-
 
         corner_list = list()
         interpol_list = list()
@@ -441,14 +415,26 @@ class GridMap:
         fw = open(filename, 'w')
         for line in finalshape.keys():
             for point in finalshape[line]:
-                corner_list.append(point)
-                fw.write(str(point) + '\n')
+                if in_territory==True:
+                    cell = self.find_cell(float(point[0]), float(point[1]))
+                    if cell and self.grid[cell[0]][cell[1]]['in_territory'] == True:
+                        corner_list.append(point)
+                        fw.write(str(point) + '\n')
+                elif in_territory==False:
+                    corner_list.append(point)
+                    fw.write(str(point) + '\n')
         
         for line in interpolated[0].keys():
             for sect in interpolated[0][line]:
                 for point in sect:
-                    interpol_list.append(point)
-                    fw.write(str(point) + '\n')
+                    if in_territory==True:
+                        cell = self.find_cell(float(point[0]), float(point[1]))
+                        if cell and self.grid[cell[0]][cell[1]]['in_territory'] == True:
+                            interpol_list.append(point)
+                            fw.write(str(point) + '\n')
+                    elif in_territory==False:
+                        interpol_list.append(point)
+                        fw.write(str(point) + '\n')
 
         fw.close()
         return corner_list, interpol_list
