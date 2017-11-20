@@ -200,18 +200,21 @@ class GridMap:
                 for info, shape in zip(shapeinfo, shapearray):
                     if info[key] == value:
                         defined_shape.append(shape)
+            else:
+                for shape in shapearray:
+                    defined_shape.append(shape)
 
-                for l, c in point_list:
-                    x, y = basemap(self.grid[l][c]['centroid'][0], self.grid[l][c]['centroid'][1])
-                    pt = Point(x, y)
-                    
-                    for shape in defined_shape:
-                        poly = Polygon(shape)
-                        if pt.within(poly) == True:
-                            in_borders.append((l, c))
+            for l, c in point_list:
+                x, y = basemap(self.grid[l][c]['centroid'][0], self.grid[l][c]['centroid'][1])
+                pt = Point(x, y)
+                
+                for shape in defined_shape:
+                    poly = Polygon(shape)
+                    if pt.within(poly) == True:
+                        in_borders.append((l, c))
 
-                for l, c in in_borders:
-                    self.grid[l][c]['in_territory'] = True    
+            for l, c in in_borders:
+                self.grid[l][c]['in_territory'] = True
 
         return in_borders
 
