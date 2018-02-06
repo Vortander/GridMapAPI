@@ -24,7 +24,7 @@ class StreetPoint:
 
 class BairrosMap:
 	
-	def __init__(self, basemap, shape_info, shapearray, code_bairro_key):
+	def __init__(self, basemap, shape_info, shapearray, code_bairro_key, bairro_name_key=None):
 		self.basemap = basemap
 		self.shape_info = shape_info
 		self.shape_array = shapearray
@@ -33,13 +33,28 @@ class BairrosMap:
 		self.grid_bairros = [i for i in range(self.size)]
 
 
-		for i, info, shape in zip( range(self.size), self.shape_info, self.shapearray ):
+
+
+
+		for i, info, shape in zip( range(self.size), self.shape_info, self.shape_array ):
+			if bairro_name_key!=None:
+				bairro_name = info[bairro_name_key]
+			else:
+				bairro_name = None
+
+			x, y = zip(*shape)
+			lon, lat = basemap(x, y, inverse=True)
 			
-			bairro = { 'bairro_shape': None,
-						'bairro_polygon': None,
+			bairro = {  'index': i,
+						'bairro_shape_x': x,
+						'bairro_shape_y': y,
+						'bairro_shape_lon': lon,
+						'bairro_shape_lat': lat,
+						'bairro_polygon': Polygon(shape),
+						'bairro_code': info[code_bairro_key],
+						'bairro_name': bairro_name,
 						'attributes' : None,
 						'total_attributes' : None,
-						'index': None,
 						'label': None,
 						'train_or_test': None,
 						}
