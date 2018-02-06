@@ -746,14 +746,15 @@ class GridMap:
         basemap.plot(lon_, lat_, mark, markersize=size)
 
         
-    def distribute_crimes(self, basemap, data):
-        self.plot_grid(basemap, 0, 1)
+    def distribute_crimes(self, basemap, data, linewidth):
+        self.plot_grid(basemap, 0, linewidth)
 
         total_crimes = []
         ylat = []
         xlon = []
         for dlat, dlon in zip(data.lat.values, data.lon.values):
             c = self.find_cell(dlat, dlon)
+            print(c)
             if not c:
                 total_crimes.append(0)
             else:
@@ -772,7 +773,7 @@ class GridMap:
         
         x, y, z = xlon, ylat, total_crimes
         zi = griddata(x, y, z, xi, yi, interp='linear')
-        m = basemap.contourf(xi, yi, zi, vmin=-5, vmax=self.get_max_crimes()['total_crimes'], alpha=0.5)
+        m = basemap.contourf(xi, yi, zi, vmin=1, vmax=self.get_max_crimes()['total_crimes'], alpha=0.5)
         cb = basemap.colorbar(m, location='bottom', pad="5%")
         
         
@@ -800,7 +801,7 @@ class GridMap:
                         x, y, z = data.X.values, data.Y.values, data.Z.values
                         zi = griddata(x, y, z, xi, yi, interp='linear')
                         cs = basemap.contourf(xi, yi, zi, vmin=1, vmax=self.get_max_crimes()['total_crimes'], cmap = plt.cm.jet, alpha=0.5)
-                    
+                        
 
     def street_points(self, basemap, corner_list, interpol_list, cmark='g', imark='b'):
         #corner_list, interpol_list = lat, lon
@@ -875,7 +876,8 @@ class GridMap:
                   plt.annotate(self.grid[l][c]['total_crimes'], (lon, lat), size=8)
 
 
-
+    # def show_colorbar(self, basemap):
+    #     plt.clim(0,self.get_max_crimes()['total_crimes'], cmap = plt.cm.jet, alpha=0.5)
 
 
 
