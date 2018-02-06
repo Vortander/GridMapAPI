@@ -12,7 +12,7 @@ from scipy.misc import imread
 #Bairros = Neighborhood
 
 
-class Point:
+class StreetPoint:
 	
 	def __init__(self, basemap, lon, lat):
 		self.lon = lon
@@ -29,22 +29,22 @@ class BairrosMap:
 		self.shape_info = shape_info
 		self.shape_array = shapearray
 		self.cod_bairro_key = code_bairro_key
+		self.size = len(shapearray)
+		self.grid_bairros = [i for i in range(self.size)]
 
-		for info, shape in zip(self.shape_info, self.shapearray):
+
+		for i, info, shape in zip( range(self.size), self.shape_info, self.shapearray ):
 			
-			self.bairro = { 'bairro_shape': None,
+			bairro = { 'bairro_shape': None,
 						'bairro_polygon': None,
-						'attributes' : None
-						'attributes_time' : {}
-						'total_attributes' : None
+						'attributes' : None,
+						'total_attributes' : None,
+						'index': None,
+						'label': None,
+						'train_or_test': None,
 						}
 
-
-
-
-		
-
-
+			self.grid_bairros[i] = bairro
 
 
 	def check_bairro(self, cod_bairro, point):
@@ -58,8 +58,6 @@ class BairrosMap:
 					point.bairro = cod_bairro
 
 				return iswithin
-
-
 
 
 
