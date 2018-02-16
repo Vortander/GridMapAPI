@@ -20,7 +20,7 @@ class Point:
 		self.x, self.y = basemap( lon, lat )
 		
 		self.cod_bairro = None
-		self.total_attributes = None
+		self.total_variable = None
 		self.label = None
 		self.train_or_test = None
 		self.in_territory = None
@@ -61,7 +61,7 @@ class PointMap:
 				 'x' : self.pointmap[index].x,
 				 'y' : self.pointmap[index].y,
 				 'cod_bairro' : self.pointmap[index].cod_bairro,
-				 'total_attributes' : self.pointmap[index].total_attributes,
+				 'total_variable' : self.pointmap[index].total_variable,
 				 'label': self.pointmap[index].label,
 				 'train_or_test': self.pointmap[index].train_or_test,
 				 'in_territory': self.pointmap[index].in_territory
@@ -101,7 +101,7 @@ class BairrosMap:
 						'bairro_code': info[code_bairro_key],
 						'bairro_name': bairro_name,
 						'attributes' : None,
-						'total_attributes' : None,
+						'total_variable' : None,
 						'label': None,
 						'train_or_test': None,
 						}
@@ -125,7 +125,7 @@ class BairrosMap:
 			if iswithin == True:
 				point.in_territory = True
 				point.cod_bairro = info[self.code_bairro_key]
-				point.total_attributes = self.grid_bairros[i]['total_attributes']
+				point.total_variable = self.grid_bairros[i]['total_variable']
 				point.label = self.grid_bairros[i]['label']
 				point.train_or_test = self.grid_bairros[i]['train_or_test']
 

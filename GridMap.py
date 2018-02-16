@@ -120,7 +120,7 @@ class GridMap:
 						'upperlat': cell_lowerleftlat + inc_lat,
 						'cell': (l, c),
 						'centroid': [cell_lowerleftlon + cen_lon, cell_lowerleftlat + cen_lat],
-						'total_crimes': 0,
+						'total_variable': 0,
 						'date_time': list(),
 						'in_territory': False,
 						'crimes_per_window': {},
@@ -148,25 +148,25 @@ class GridMap:
 					return (l, c)
 	
 	def add_crime(self, l, c, date, time):
-		self.grid[l][c]['total_crimes'] += 1
+		self.grid[l][c]['total_variable'] += 1
 		self.grid[l][c]['date_time'].append((date, time))
 	
 	def get_max_crimes(self):
 		maxim = 0
 		for l in range(0, self.step):
 			for c in range(0, self.step):
-				if self.grid[l][c]['total_crimes'] > maxim:
-					maxim = self.grid[l][c]['total_crimes']
+				if self.grid[l][c]['total_variable'] > maxim:
+					maxim = self.grid[l][c]['total_variable']
 					all_max = self.grid[l][c]
 		return all_max
 
 	def get_min_crimes(self):
-		maxim = self.get_max_crimes()['total_crimes']
+		maxim = self.get_max_crimes()['total_variable']
 		minim = maxim
 		for l in range(0, self.step):
 			for c in range(0, self.step):
-				if (self.grid[l][c]['total_crimes'] < minim) and (self.grid[l][c]['total_crimes'] > 0):
-					minim = self.grid[l][c]['total_crimes']
+				if (self.grid[l][c]['total_variable'] < minim) and (self.grid[l][c]['total_variable'] > 0):
+					minim = self.grid[l][c]['total_variable']
 					all_min = self.grid[l][c]
 		return all_min
 
@@ -176,9 +176,9 @@ class GridMap:
 			for c in range(lowercell[1], uppercell[1]+1):
 				if inTerritory == True:
 					if self.grid[l][c]['in_territory'] == True:
-						crime_by_cell.append([(l, c), self.grid[l][c]['total_crimes']])
+						crime_by_cell.append([(l, c), self.grid[l][c]['total_variable']])
 				else:
-					crime_by_cell.append([(l, c), self.grid[l][c]['total_crimes']])
+					crime_by_cell.append([(l, c), self.grid[l][c]['total_variable']])
 
 		return crime_by_cell
 
@@ -396,12 +396,12 @@ class GridMap:
 			for item in trainset:
 				cell = item[0]
 				self.grid[cell[0]][cell[1]]['train_or_test'] = 'train'
-				range_distribution['train'].append((cell, self.grid[cell[0]][cell[1]]['total_crimes'], self.grid[cell[0]][cell[1]]['train_or_test']))
+				range_distribution['train'].append((cell, self.grid[cell[0]][cell[1]]['total_variable'], self.grid[cell[0]][cell[1]]['train_or_test']))
 	 
 			for item in testset:
 				cell = item[0]
 				self.grid[cell[0]][cell[1]]['train_or_test'] = 'test'
-				range_distribution['test'].append((cell, self.grid[cell[0]][cell[1]]['total_crimes'], self.grid[cell[0]][cell[1]]['train_or_test']))
+				range_distribution['test'].append((cell, self.grid[cell[0]][cell[1]]['total_variable'], self.grid[cell[0]][cell[1]]['train_or_test']))
 
 		return range_distribution
 
@@ -651,7 +651,7 @@ class GridMap:
 		for l in range(0, self.step):
 			for c in range(0, self.step):
 				if self.grid[l][c]['in_territory'] == True:
-					distribution.append([(l, c), self.grid[l][c]['total_crimes']])
+					distribution.append([(l, c), self.grid[l][c]['total_variable']])
 
 		if order=='asc':
 			reverse = False
@@ -740,7 +740,7 @@ class GridMap:
 			for c in range(0, self.step):
 				if self.grid[l][c]['in_territory'] == True:
 					total+=1
-					attr = self.grid[l][c]['total_crimes']
+					attr = self.grid[l][c]['total_variable']
 					distribution.append([attr, (l, c)])
 
 		ord_distribution = sorted(distribution, key = lambda x: float(x[0]))
@@ -776,16 +776,16 @@ class GridMap:
 	def distribute_crimes(self, basemap, data, linewidth):
 		self.plot_grid(basemap, 0, linewidth)
 
-		total_crimes = []
+		total_variable = []
 		ylat = []
 		xlon = []
 		for dlat, dlon in zip(data.lat.values, data.lon.values):
 			c = self.find_cell(dlat, dlon)
 			print(c)
 			if not c:
-				total_crimes.append(0)
+				total_variable.append(0)
 			else:
-				total_crimes.append(self.grid[c[0]][c[1]]['total_crimes'])
+				total_variable.append(self.grid[c[0]][c[1]]['total_variable'])
 		
 		for dlat, dlon in zip(data.lat.values, data.lon.values):
 			x, y = basemap(dlon, dlat)
@@ -798,9 +798,9 @@ class GridMap:
 		yi = np.linspace(basemap.llcrnry, basemap.urcrnry, numrows)
 		xi, yi = np.meshgrid(xi, yi)
 		
-		x, y, z = xlon, ylat, total_crimes
+		x, y, z = xlon, ylat, total_variable
 		zi = griddata(x, y, z, xi, yi, interp='linear')
-		m = basemap.contourf(xi, yi, zi, vmin=1, vmax=self.get_max_crimes()['total_crimes'], alpha=0.5)
+		m = basemap.contourf(xi, yi, zi, vmin=1, vmax=self.get_max_crimes()['total_variable'], alpha=0.5)
 		cb = basemap.colorbar(m, location='bottom', pad="5%")
 		
 		
@@ -809,17 +809,17 @@ class GridMap:
 
 		for l in range(0, self.step):
 			for c in range(0, self.step):
-				if self.grid[l][c]['total_crimes'] > 0:
+				if self.grid[l][c]['total_variable'] > 0:
 					if self.grid[l][c]['in_territory'] == True:
 						left_lon1, right_lon1 = basemap([self.grid[l][c]['leftlon'], self.grid[l][c]['rightlon']], [self.grid[l][c]['lowerlat'], self.grid[l][c]['lowerlat']])
 						left_lon2, right_lon2 = basemap([self.grid[l][c]['leftlon'], self.grid[l][c]['rightlon']], [self.grid[l][c]['upperlat'], self.grid[l][c]['upperlat']])
 						low_lat1, up_lat1 = basemap([self.grid[l][c]['rightlon'], self.grid[l][c]['rightlon']], [self.grid[l][c]['lowerlat'], self.grid[l][c]['upperlat']])
 						low_lat2, up_lat2 = basemap([self.grid[l][c]['leftlon'], self.grid[l][c]['leftlon']], [self.grid[l][c]['upperlat'], self.grid[l][c]['lowerlat']])
 						
-						data = pd.DataFrame([(left_lon1[0], right_lon1[0], self.grid[l][c]['total_crimes']),
-											(low_lat1[1], up_lat1[1], self.grid[l][c]['total_crimes']),
-											(low_lat2[0], up_lat2[0], self.grid[l][c]['total_crimes']),
-											(low_lat1[0], up_lat1[0], self.grid[l][c]['total_crimes'])], columns=list('XYZ'))
+						data = pd.DataFrame([(left_lon1[0], right_lon1[0], self.grid[l][c]['total_variable']),
+											(low_lat1[1], up_lat1[1], self.grid[l][c]['total_variable']),
+											(low_lat2[0], up_lat2[0], self.grid[l][c]['total_variable']),
+											(low_lat1[0], up_lat1[0], self.grid[l][c]['total_variable'])], columns=list('XYZ'))
 						numcols, numrows = self.step + 2, self.step + 2
 						xi = np.linspace(data.X.min(), data.X.max(), numcols)
 						yi = np.linspace(data.Y.min(), data.Y.max(), numrows)
@@ -827,7 +827,7 @@ class GridMap:
 						
 						x, y, z = data.X.values, data.Y.values, data.Z.values
 						zi = griddata(x, y, z, xi, yi, interp='linear')
-						cs = basemap.contourf(xi, yi, zi, vmin=1, vmax=self.get_max_crimes()['total_crimes'], cmap = plt.cm.jet, alpha=0.5)
+						cs = basemap.contourf(xi, yi, zi, vmin=1, vmax=self.get_max_crimes()['total_variable'], cmap = plt.cm.jet, alpha=0.5)
 						
 
 	def street_points(self, basemap, corner_list, interpol_list, cmark='g', imark='b'):
@@ -900,11 +900,11 @@ class GridMap:
 			for l in range(0, self.step):
 				for c in range(0, self.step):
 				  lon, lat = basemap(self.grid[l][c]['centroid'][0], self.grid[l][c]['centroid'][1])
-				  plt.annotate(self.grid[l][c]['total_crimes'], (lon, lat), size=8)
+				  plt.annotate(self.grid[l][c]['total_variable'], (lon, lat), size=8)
 
 
 	# def show_colorbar(self, basemap):
-	#     plt.clim(0,self.get_max_crimes()['total_crimes'], cmap = plt.cm.jet, alpha=0.5)
+	#     plt.clim(0,self.get_max_crimes()['total_variable'], cmap = plt.cm.jet, alpha=0.5)
 
 
 
