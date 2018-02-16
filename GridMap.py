@@ -100,7 +100,6 @@ class GridMap:
 		self.lowerleftlat = lowerleftlat
 		self.uprightlon = uprightlon
 		self.uprightlat = uprightlat
-		self.image_distribution = {}
 		self.window = ""
 		self.labels = list()
 
@@ -270,30 +269,6 @@ class GridMap:
 
 		return (new_points, differences)
 
-	def distribute_images(self, basemap, shapearray, finalshape = list(), new_points = list()):
-		cells = self.set_borders(basemap, shapearray)
-		for c in cells:
-			self.image_distribution[c] = list()
-		
-		# If finalshape is not empty
-		if finalshape:
-			for key in finalshape.copy().keys():
-				for point in finalshape[key]:
-					c = self.find_cell(point[0], point[1])
-					if c and self.grid[c[0]][c[1]]['in_territory'] == True:
-						self.image_distribution[c].append(str(key) + "_" + str(point[0]) + "_" + str(point[1]))
-					else:
-						continue
-
-		if new_points:
-			for key in new_points[0].copy().keys():
-				for segment in new_points[0][key]:
-					for point in segment:
-						c = self.find_cell(point[0], point[1])
-						if c and self.grid[c[0]][c[1]]['in_territory'] == True:
-							self.image_distribution[c].append(str(key) + "_" + str(point[0]) + "_" + str(point[1]))
-						else:
-							continue
 
 	def add_attributes(self, l, c, attribute, window):
 		if attribute in self.grid[l][c]['attributes_per_window']:
@@ -305,16 +280,6 @@ class GridMap:
 			self.grid[l][c]['attributes_per_window'][attribute] = { window: 1 }
 
 
-	def set_labels_per_point(self, labels_per_cell, filename='LabelsPerPoint.list', borderline=True):
-		fw = open(filename, 'w')
-		fw.write('cell,label,point\n')
-		for c in labels_per_cell:
-			for point in self.image_distribution[c[0]]:
-				fw.write(str(c[0]) + "," + str(c[2]) + "," + str(point) + "\n")
-		fw.close()
-
-
-
 	def add_variable_per_window(self, l, c, window):
 		if window in self.grid[l][c]['variable_per_window']:
 			self.grid[l][c]['variable_per_window'][window] += 1
@@ -324,33 +289,6 @@ class GridMap:
 
 	def set_window(self, windowstruct):
 		self.window = windowstruct
-
-
-	def set_labels_with_threshold(self, variable_cell_list, label_list, min_variable=2):
-		#TODO: works only for binary classification
-		for cells in variable_cell_list:
-			num_variable = cells[1]
-
-			if num_variable > min_variable:
-				self.grid[cells[0][0]][cells[0][1]]['label'] = label_list[1]
-			else:
-				self.grid[cells[0][0]][cells[0][1]]['label'] = label_list[0]
-
-			print(cells[0], cells[1], self.grid[cells[0][0]][cells[0][1]]['label'])
-
-	def count_labels(self, lowercell, uppercell, label_list):
-		#TODO: works only for binary classification
-		label_count = {}
-		label_count[label_list[0]] = 0
-		label_count[label_list[1]] = 0
-		for l in range(lowercell[0], uppercell[0]+1):
-			for c in range(lowercell[1], uppercell[1]+1):
-				if self.grid[l][c]['label'] == label_list[0]:
-					label_count[label_list[0]] += 1
-				elif self.grid[l][c]['label'] == label_list[1]:
-					label_count[label_list[1]] += 1
-
-		return label_count
 
 
 	def set_labels_per_range(self, variable_cell_list, label_list):
@@ -376,36 +314,10 @@ class GridMap:
 	
 		return variable_with_label
 
-	#TDOD: Change the methodology of sampling for stratified sampling
-	def set_train_test_distribution(self, variable_cell_list, slices=4, train_size=0.7):
-		range_distribution = {'train': list(), 'test': list()} 
-		variable_list = variable_cell_list[:]
-		variable_with_label = list()
-	   
-		for i in range(slices, 0, -1):
-			group = round(len(variable_list)/i)
-			c = variable_list[:int(group)]
-			variable_list = variable_list[int(group):]
-			#split c block in train and test
-			train = round(len(c) * train_size)
-			test = len(c) - train
-			trainset = c[:int(train)]
-			testset = c[int(train):len(c)]
-			
-			for item in trainset:
-				cell = item[0]
-				self.grid[cell[0]][cell[1]]['train_or_test'] = 'train'
-				range_distribution['train'].append((cell, self.grid[cell[0]][cell[1]]['total_variable'], self.grid[cell[0]][cell[1]]['train_or_test']))
-	 
-			for item in testset:
-				cell = item[0]
-				self.grid[cell[0]][cell[1]]['train_or_test'] = 'test'
-				range_distribution['test'].append((cell, self.grid[cell[0]][cell[1]]['total_variable'], self.grid[cell[0]][cell[1]]['train_or_test']))
-
-		return range_distribution
-
+	
 	def set_grid_labels(self, labelslist):
 		self.labels = labelslist
+
 
 	def gen_pointlist_from_shapefile(self, finalshape, interpolated, filename="pointListFromShapefile.list", in_territory=False):
 		# finalshape from self.convert_shape, interpolated from self.generate_inter_points
@@ -447,7 +359,7 @@ class GridMap:
 		
 
 	def gen_pointlist_from_dir(self, path, tot='all', filename="pointListFromDir.list", metacheck=True):
-		print(metacheck)
+		
 		if metacheck == False:
 			imagepath = path
 			metapath = ""
@@ -456,10 +368,6 @@ class GridMap:
 			metapath = path + "/meta"
 
 		print(imagepath)
-		# try:
-		#     file_list = sorted(os.listdir(imagepath))
-		# except:
-		#     file_list = sorted(os.listdir(path))
 		file_list = sorted(os.listdir(imagepath))
 		
 		fw = open(filename, 'w')
@@ -529,6 +437,7 @@ class GridMap:
 		fw1.close()
 		fw2.close()
 
+
 	def set_labels_per_cell(self, lowercell, uppercell, label, train_or_test):
 		for l in range(lowercell[0], uppercell[0]+1):
 			for c in range(lowercell[1], uppercell[1]+1):
@@ -536,17 +445,6 @@ class GridMap:
 					self.grid[l][c]['label'] = label
 				self.grid[l][c]['train_or_test'] = train_or_test
 					
-
-	
-	# def gen_point_labels(self, pointListFromDir, filename="pointsLabel.list"):
-	#     fw = open(filename, 'w')
-	#     for point in pointListFromDir:
-	#         cell = self.find_cell(point[0], point[1])
-	#         if not cell:
-	#             continue
-	#         else:
-	#             fw.write(str(point[0]) + ',' + str(point[1]) + ',' + str(cell['label']) + ',' + str(cell['train_or_test']) + '\n')
-	#     fw.close()
 
 	def _near_line(self, x2, y2, x1, y1, x3, y3, meters):
 		cpoint = _get_perp(float(x1), float(y1), float(x2), float(y2), float(x3), float(y3))
@@ -557,81 +455,7 @@ class GridMap:
 		
 		return False
 
-	def copy_images_to_dir(self, sourcepath, destinypath, filenameListFromDir, borderline=False):
-		
-		online = False
-		fr = open(filenameListFromDir, 'r')
-		pointListFromDir = fr.readlines()
-		fw = open(filenameListFromDir + '_copy.log', 'w')
-		for point in pointListFromDir:
-			point = point.replace("\n","")
-			lat, lon = point.split(',')
-			cell = self.find_cell(float(lat), float(lon))
-			if not cell:
-				continue
-			else:
-				train_or_test = self.grid[cell[0]][cell[1]]['train_or_test']
-				label = self.grid[cell[0]][cell[1]]['label']
-				
-				# Test if point is above borderlines 
-				if borderline == True:
-					border1_online = self._near_line( self.grid[cell[0]][cell[1]]['leftlon'], self.grid[cell[0]][cell[1]]['upperlat'], self.grid[cell[0]][cell[1]]['leftlon'], self.grid[cell[0]][cell[1]]['lowerlat'], lon, lat, 0.2)
-					border2_online = self._near_line( self.grid[cell[0]][cell[1]]['rightlon'], self.grid[cell[0]][cell[1]]['upperlat'], self.grid[cell[0]][cell[1]]['rightlon'], self.grid[cell[0]][cell[1]]['lowerlat'], lon, lat, 0.2)
-					border3_online = self._near_line( self.grid[cell[0]][cell[1]]['rightlon'],  self.grid[cell[0]][cell[1]]['lowerlat'], self.grid[cell[0]][cell[1]]['leftlon'], self.grid[cell[0]][cell[1]]['lowerlat'], lon, lat, 0.2)
-					border4_online = self._near_line( self.grid[cell[0]][cell[1]]['rightlon'], self.grid[cell[0]][cell[1]]['upperlat'], self.grid[cell[0]][cell[1]]['leftlon'], self.grid[cell[0]][cell[1]]['upperlat'], lon, lat, 0.2)
-				
-				if train_or_test != None or label != None:
-				   if (border1_online or border2_online or border3_online or border4_online) == False:
-					   for c in ['0', '90', '180', '270']:
-							try:
-								copy2(sourcepath + '/' + str(lat) + "_" + str(lon) + "_" + c + '.jpg', destinypath + '/' + str(train_or_test) + '/' + str(label) + '/')
-							except:
-								fw.write("Could not copy file, " + sourcepath + '/' + str(lat) + "_" + str(lon) + "_" + c + '.jpg' + " " + destinypath + '/' + str(train_or_test) + '/' + str(label) + '\n')
-		fw.close()
-		fr.close()
 
-
-	def gen_imagelist_with_label(self, cell_path, variable_with_label, filename="imageListLabels.list"):
-		fw = open(filename, 'w')
-		fw.write('line,column,file,label\n')
-		for cell in variable_with_label:
-			l = cell[0][0]
-			c = cell[0][1]
-			label = cell[2]
-			directory = cell_path + str(l) + "_" + str(c)
-			for file in sorted(os.listdir(directory)):
-				fw.write(str(l) + "," + str(c) + "," + file + "," + label + "\n")
-
-	def gen_images_dict(self, cell_path, variable_with_label):
-		# create dictionary with all files
-		dictimages = {}
-		cell_labels = {}
-		for cell in variable_with_label:
-			if not cell[2] in dictimages:
-				dictimages[cell[2]] = {}
-		for cell in variable_with_label:
-			if not cell[2] in cell_labels:
-				cell_labels[cell[2]] = []
-		for cell in variable_with_label:
-			cell_labels[cell[2]].append((cell[0][0], cell[0][1]))
-
-		print(dictimages)
-		print(cell_labels)
-		
-		for labcell in cell_labels.copy().keys():
-			label = labcell
-			counter = 1
-			for cells in cell_labels[label]:
-				l = cells[0]
-				c = cells[1]
-				directory = cell_path + str(l) + "_" + str(c)
-				for file in sorted(os.listdir(directory)):
-					dictimages[label][counter] = [(l,c), file]
-					counter+=1
-
-		return dictimages
-
-#TODO: Mudar esse nome para 'gen_point_list'
 	def read_point_list(self, filename):    
 		pointlist = []
 		fw = open(filename, 'r')
@@ -645,7 +469,8 @@ class GridMap:
 
 		return pointlist
 
-	def get_attr_distribuition(self, order='dsc'):
+
+	def get_variable_distribuition(self, order='dsc'):
 		distribution = list()
 		for l in range(0, self.step):
 			for c in range(0, self.step):
@@ -658,55 +483,6 @@ class GridMap:
 			reverse = True
 
 		return sorted(distribution, key=lambda x: x[1], reverse=reverse)
-
-# TODO: Add parameter fromJson = True -> and trainsform key in str: images_dict[label][str(i)][0][1]
-	def gen_train_test(self, images_dict, source_path, destiny_path, maxfiles, trainpercent):
-		lenght_per_labels = {}
-		for keys in images_dict.copy().keys():
-			if not keys in lenght_per_labels:
-				lenght_per_labels[keys] = len(images_dict[keys])
-		
-		print("Number of files per label: ", lenght_per_labels)
-
-		# create directories
-		labels = list(images_dict.keys())
-		try:
-			os.mkdir(destiny_path + "train")
-			os.mkdir(destiny_path + "test")
-		except:
-			print("Could not create train and test directories.")
-			sys.exit()
-
-		try:
-			for label in labels:
-				os.mkdir(destiny_path + "train/" + label)
-				os.mkdir(destiny_path + "test/" + label)
-		except:
-			print("Could not create label subdirectories.")
-			sys.exit()
-
-		for label in labels:
-			rand_numbers = _random_list(maxfiles, len(images_dict[label]))
-			
-			#trainpercent
-			train_size = round(maxfiles * trainpercent)
-			test_size = maxfiles - train_size
-			print(label, train_size, test_size)
-			
-			train_set = rand_numbers[:train_size]
-			test_set = rand_numbers[train_size:]
-			# train
-			for i in train_set:
-				try:
-					copy2(source_path + str(images_dict[label][i][0][0]) + "_" + str(images_dict[label][i][0][1]) + "/" + images_dict[label][i][1], destiny_path + "train/" + label + "/")
-				except:
-					print("Could not copy file ", source_path + str(images_dict[label][i][0][0]) + "_" + str(images_dict[label][i][0][1]) + "/" + images_dict[label][i][1], destiny_path + "train/" + label + "/")
-
-			for j in test_set:
-				try:
-					copy2(source_path + str(images_dict[label][j][0][0]) + "_" + str(images_dict[label][j][0][1]) + "/" + images_dict[label][j][1], destiny_path + "test/" + label + "/")
-				except:
-					print("Could not copy file ", source_path + str(images_dict[label][j][0][0]) + "_" + str(images_dict[label][j][0][1]) + "/" + images_dict[label][j][1], destiny_path + "test/" + label + "/")
 
 
 	def save(self, filename = "Model.grid"):
@@ -728,10 +504,7 @@ class GridMap:
 			return "Error while loading file."
 
 
-
-### Sampling methods
-
-	def get_attr_cell_distribution(self, normalize=False):
+	def get_variable_cell_distribution(self, normalize=False):
 		distribution = []
 
 		total = 0
@@ -749,13 +522,9 @@ class GridMap:
 			ord_distribution = [[value[0]/float(max_attr), value[1]] for value in ord_distribution]
 
 		return ord_distribution
-				
 
 
-
-
-
-#### Métodos para Plotagem ####                    
+#### Plot Methods ####                    
 	def plot_grid(self, basemap, marksize, linewidth):
 		for l in range(0, self.step):
 			for c in range(0, self.step):
@@ -887,7 +656,7 @@ class GridMap:
 				basemap.plot(centroid[0], centroid[1], 'D', markersize=3.0, linewidth=3.0, color=color)
 
 
-	def show_info(self, basemap, position=True, attr_value=False):
+	def show_info(self, basemap, position=True, variable_value=False):
 		self.plot_grid(basemap, 0, 1.0)
 		if position==True:
 			for l in range(0, self.step):
@@ -895,15 +664,11 @@ class GridMap:
 				  lon, lat = basemap(self.grid[l][c]['centroid'][0], self.grid[l][c]['centroid'][1])
 				  plt.annotate((l,c), (lon, lat), size=8)
 
-		if attr_value==True:
+		if variable_value==True:
 			for l in range(0, self.step):
 				for c in range(0, self.step):
 				  lon, lat = basemap(self.grid[l][c]['centroid'][0], self.grid[l][c]['centroid'][1])
 				  plt.annotate(self.grid[l][c]['total_variable'], (lon, lat), size=8)
-
-
-	# def show_colorbar(self, basemap):
-	#     plt.clim(0,self.get_max_variable()['total_variable'], cmap = plt.cm.jet, alpha=0.5)
 
 
 
