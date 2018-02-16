@@ -218,57 +218,6 @@ class GridMap:
 
 		return in_borders
 
-	def convert_shape(self, basemap, shapearray):
-		lonlatlines = []
-		finalshape = {}
-		street_counter = 0
-		for shape in shapearray:
-			x, y = zip(*shape)
-			lonx, laty = basemap(x, y, inverse=True)
-			finalshape[street_counter] = [(i,j) for i,j in zip(laty, lonx)]
-			street_counter+=1
-
-		return finalshape
-
-	  
-	def generate_inter_points(self, finalshape):
-		new_points = {}
-		differences = {}
-		for key in finalshape.copy().keys():
-			new_points[key] = []
-			differences[key] = []
-			for i in range(0, len(finalshape[key])):
-				if i < len(finalshape[key]) - 1:
-					current_lat = finalshape[key][i][0]
-					current_lon = finalshape[key][i][1]
-					next_lat = finalshape[key][i+1][0]
-					next_lon = finalshape[key][i+1][1]
-					
-					interpos = []
-					# check if the distance between the 2 points is more than 100 meters
-					meters = _haversine(current_lat, current_lon, next_lat, next_lon)
-					if meters > 0.1:
-						#Interpolar 10 pontos
-						distance_lat = next_lat - current_lat
-						distance_lon = next_lon - current_lon
-						inclat = distance_lat/4
-						inclon = distance_lon/4
-
-						for i in range(0, 3):
-							prox_lat = current_lat + inclat
-							prox_lon = current_lon + inclon
-							interpos.append((prox_lat, prox_lon))
-							current_lat = prox_lat
-							current_lon = prox_lon
-
-						new_points[key].append(interpos)
-						differences[key].append(meters)
-
-					else:
-						continue
-
-		return (new_points, differences)
-
 
 	def add_attributes(self, l, c, attribute, window):
 		if attribute in self.grid[l][c]['attributes_per_window']:
@@ -319,125 +268,6 @@ class GridMap:
 		self.labels = labelslist
 
 
-	def gen_pointlist_from_shapefile(self, finalshape, interpolated, filename="pointListFromShapefile.list", in_territory=False):
-		# finalshape from self.convert_shape, interpolated from self.generate_inter_points
-		# format:
-		# corner_list = dictionary {line: [points]}
-		# interpol_list = tuple(dictionary {line: [points]}, diferences)
-		# return corner_list, interpol_list
-
-		corner_list = list()
-		interpol_list = list()
-
-		fw = open(filename, 'w')
-		for line in finalshape.keys():
-			for point in finalshape[line]:
-				if in_territory==True:
-					cell = self.find_cell(float(point[0]), float(point[1]))
-					if cell and self.grid[cell[0]][cell[1]]['in_territory'] == True:
-						corner_list.append(point)
-						fw.write(str(point) + '\n')
-				elif in_territory==False:
-					corner_list.append(point)
-					fw.write(str(point) + '\n')
-		
-		for line in interpolated[0].keys():
-			for sect in interpolated[0][line]:
-				for point in sect:
-					if in_territory==True:
-						cell = self.find_cell(float(point[0]), float(point[1]))
-						if cell and self.grid[cell[0]][cell[1]]['in_territory'] == True:
-							interpol_list.append(point)
-							fw.write(str(point) + '\n')
-					elif in_territory==False:
-						interpol_list.append(point)
-						fw.write(str(point) + '\n')
-
-		fw.close()
-		return corner_list, interpol_list
-
-		
-
-	def gen_pointlist_from_dir(self, path, tot='all', filename="pointListFromDir.list", metacheck=True):
-		
-		if metacheck == False:
-			imagepath = path
-			metapath = ""
-		else:
-			imagepath = path + "/images"
-			metapath = path + "/meta"
-
-		print(imagepath)
-		file_list = sorted(os.listdir(imagepath))
-		
-		fw = open(filename, 'w')
-		fw1 = open('removed_' + filename + '.log', 'w')
-		fw2 = open('damaged_' + filename + '.log', 'w')
-
-		latlons = list()
-		for imagename in file_list:
-			slices = imagename.split('_')
-			if len(slices) > 3:
-				line = slices[0]
-				lat = slices[1]
-				lon = slices[2]
-			elif len(slices) == 3:
-				line = None
-				lat = slices[0]
-				lon = slices[1]
-			else:
-				sys.exit("Wrong file name format: accept only [line_lat_lon_cam] or [lat_lon_cam]")
-			
-			latlons.append((line, lat, lon))
-			
-		latlons = list(set(latlons))
-
-		if tot != 'all':
-			lim = tot
-		else:
-			lim = len(latlons)
-		
-		for point in latlons[:lim]:
-			allcamera = list()
-			status = list()
-
-			#Check if all camera views are present, can read, shape and dimensions
-			for c in ['0', '90', '180', '270']:
-				try:
-					image = imread(str(imagepath) + '/' + str(point[1]) + '_' + str(point[2]) + '_' + c + '.jpg')
-					if len(image.shape)!= 3 or image.shape[0] != 640 or image.shape[1] != 640:
-						allcamera.append(c)
-						fw2.write("channel or wrong shape," + str(imagepath) + '/' + str(point[1]) + '_' + str(point[2]) + '_' + c + '.jpg\n')
-					if os.stat(str(imagepath) + '/' + str(point[1]) + '_' + str(point[2]) + '_' + c + '.jpg').st_size < 17000:
-						allcamera.append(c)
-						fw2.write("small size," + str(imagepath) + '/' + str(point[1]) + '_' + str(point[2]) + '_' + c + '.jpg\n')
-
-				except:
-					allcamera.append(c)
-					fw2.write("Read error," +str(imagepath) + '/' + str(point[1]) + '_' + str(point[2]) + '_' + c + '.jpg\n')
-
-			#Check metafile for OK status in images
-			if metacheck == True:
-				for c in ['0', '90', '180', '270']:
-					try:
-						with open(str(metapath) + '/' + str(point[1]) + '_' + str(point[2]) + '_' + c + '.txt', 'r') as fr:
-							meta = json.load(fr)
-						if meta['status'] != 'OK':
-							status.append(meta['status'])
-					except:
-						fw1.write("Not found: " + str(metapath) + '/' + str(point[1]) + '_' + str(point[2]) + '_' + c + '.txt\n')
-						pass
-				
-			if len(status) == 0 and len(allcamera) == 0:
-				fw.write(point[1] + ',' + point[2] + '\n')
-			else:
-				fw1.write("Status Not OK," + str(status) +  ',' + str(metapath) + '/' + str(point[1]) + '_' + str(point[2]) + '\n')
-	  
-		fw.close()
-		fw1.close()
-		fw2.close()
-
-
 	def set_labels_per_cell(self, lowercell, uppercell, label, train_or_test):
 		for l in range(lowercell[0], uppercell[0]+1):
 			for c in range(lowercell[1], uppercell[1]+1):
@@ -454,20 +284,6 @@ class GridMap:
 				return True
 		
 		return False
-
-
-	def read_point_list(self, filename):    
-		pointlist = []
-		fw = open(filename, 'r')
-		lines = fw.readlines()
-		for line in lines:
-			line = line.replace('(','').replace(')','').replace('\n','')
-			slices = line.split(',')
-			lat = slices[0]
-			lon = slices[1]
-			pointlist.append((float(lat),float(lon)))
-
-		return pointlist
 
 
 	def get_variable_distribuition(self, order='dsc'):
@@ -671,7 +487,195 @@ class GridMap:
 				  plt.annotate(self.grid[l][c]['total_variable'], (lon, lat), size=8)
 
 
+# Street and shapefile manipulation methods
 
+	# Convert shapearray to lon lat coordinates
+	def convert_shape(self, basemap, shapearray):
+		lonlatlines = []
+		finalshape = {}
+		street_counter = 0
+		for shape in shapearray:
+			x, y = zip(*shape)
+			lonx, laty = basemap(x, y, inverse=True)
+			finalshape[street_counter] = [(i,j) for i,j in zip(laty, lonx)]
+			street_counter+=1
+
+		return finalshape
+
+
+	# Generate interpolated points
+	def generate_inter_points(self, finalshape):
+		new_points = {}
+		differences = {}
+		for key in finalshape.copy().keys():
+			new_points[key] = []
+			differences[key] = []
+			for i in range(0, len(finalshape[key])):
+				if i < len(finalshape[key]) - 1:
+					current_lat = finalshape[key][i][0]
+					current_lon = finalshape[key][i][1]
+					next_lat = finalshape[key][i+1][0]
+					next_lon = finalshape[key][i+1][1]
+					
+					interpos = []
+					# check if the distance between the 2 points is more than 100 meters
+					meters = _haversine(current_lat, current_lon, next_lat, next_lon)
+					if meters > 0.1:
+						#Interpolar 10 pontos
+						distance_lat = next_lat - current_lat
+						distance_lon = next_lon - current_lon
+						inclat = distance_lat/4
+						inclon = distance_lon/4
+
+						for i in range(0, 3):
+							prox_lat = current_lat + inclat
+							prox_lon = current_lon + inclon
+							interpos.append((prox_lat, prox_lon))
+							current_lat = prox_lat
+							current_lon = prox_lon
+
+						new_points[key].append(interpos)
+						differences[key].append(meters)
+
+					else:
+						continue
+
+		return (new_points, differences)
+
+
+	# Save pointlist corner and interpolated in file, return same arrays
+	def gen_pointlist_from_shapefile(self, finalshape, interpolated, filename="pointListFromShapefile.list", in_territory=False):
+		# finalshape from self.convert_shape, interpolated from self.generate_inter_points
+		# format:
+		# corner_list = dictionary {line: [points]}
+		# interpol_list = tuple(dictionary {line: [points]}, diferences)
+		# return corner_list, interpol_list
+
+		corner_list = list()
+		interpol_list = list()
+
+		fw = open(filename, 'w')
+		for line in finalshape.keys():
+			for point in finalshape[line]:
+				if in_territory==True:
+					cell = self.find_cell(float(point[0]), float(point[1]))
+					if cell and self.grid[cell[0]][cell[1]]['in_territory'] == True:
+						corner_list.append(point)
+						fw.write(str(point) + '\n')
+				elif in_territory==False:
+					corner_list.append(point)
+					fw.write(str(point) + '\n')
+		
+		for line in interpolated[0].keys():
+			for sect in interpolated[0][line]:
+				for point in sect:
+					if in_territory==True:
+						cell = self.find_cell(float(point[0]), float(point[1]))
+						if cell and self.grid[cell[0]][cell[1]]['in_territory'] == True:
+							interpol_list.append(point)
+							fw.write(str(point) + '\n')
+					elif in_territory==False:
+						interpol_list.append(point)
+						fw.write(str(point) + '\n')
+
+		fw.close()
+		return corner_list, interpol_list
+
+
+	# Generate a pointlist from a dir containing lat_lon_camera images
+	def gen_pointlist_from_dir(self, path, tot='all', filename="pointListFromDir.list", metacheck=True):
+		
+		if metacheck == False:
+			imagepath = path
+			metapath = ""
+		else:
+			imagepath = path + "/images"
+			metapath = path + "/meta"
+
+		print(imagepath)
+		file_list = sorted(os.listdir(imagepath))
+		
+		fw = open(filename, 'w')
+		fw1 = open('removed_' + filename + '.log', 'w')
+		fw2 = open('damaged_' + filename + '.log', 'w')
+
+		latlons = list()
+		for imagename in file_list:
+			slices = imagename.split('_')
+			if len(slices) > 3:
+				line = slices[0]
+				lat = slices[1]
+				lon = slices[2]
+			elif len(slices) == 3:
+				line = None
+				lat = slices[0]
+				lon = slices[1]
+			else:
+				sys.exit("Wrong file name format: accept only [line_lat_lon_cam] or [lat_lon_cam]")
+			
+			latlons.append((line, lat, lon))
+			
+		latlons = list(set(latlons))
+
+		if tot != 'all':
+			lim = tot
+		else:
+			lim = len(latlons)
+		
+		for point in latlons[:lim]:
+			allcamera = list()
+			status = list()
+
+			#Check if all camera views are present, can read, shape and dimensions
+			for c in ['0', '90', '180', '270']:
+				try:
+					image = imread(str(imagepath) + '/' + str(point[1]) + '_' + str(point[2]) + '_' + c + '.jpg')
+					if len(image.shape)!= 3 or image.shape[0] != 640 or image.shape[1] != 640:
+						allcamera.append(c)
+						fw2.write("channel or wrong shape," + str(imagepath) + '/' + str(point[1]) + '_' + str(point[2]) + '_' + c + '.jpg\n')
+					if os.stat(str(imagepath) + '/' + str(point[1]) + '_' + str(point[2]) + '_' + c + '.jpg').st_size < 17000:
+						allcamera.append(c)
+						fw2.write("small size," + str(imagepath) + '/' + str(point[1]) + '_' + str(point[2]) + '_' + c + '.jpg\n')
+
+				except:
+					allcamera.append(c)
+					fw2.write("Read error," +str(imagepath) + '/' + str(point[1]) + '_' + str(point[2]) + '_' + c + '.jpg\n')
+
+			#Check metafile for OK status in images
+			if metacheck == True:
+				for c in ['0', '90', '180', '270']:
+					try:
+						with open(str(metapath) + '/' + str(point[1]) + '_' + str(point[2]) + '_' + c + '.txt', 'r') as fr:
+							meta = json.load(fr)
+						if meta['status'] != 'OK':
+							status.append(meta['status'])
+					except:
+						fw1.write("Not found: " + str(metapath) + '/' + str(point[1]) + '_' + str(point[2]) + '_' + c + '.txt\n')
+						pass
+				
+			if len(status) == 0 and len(allcamera) == 0:
+				fw.write(point[1] + ',' + point[2] + '\n')
+			else:
+				fw1.write("Status Not OK," + str(status) +  ',' + str(metapath) + '/' + str(point[1]) + '_' + str(point[2]) + '\n')
+	  
+		fw.close()
+		fw1.close()
+		fw2.close()
+
+
+	#Read a point list in tuple format (lat, lon) and generate a pointlist
+	def read_point_list(self, filename):    
+		pointlist = []
+		fw = open(filename, 'r')
+		lines = fw.readlines()
+		for line in lines:
+			line = line.replace('(','').replace(')','').replace('\n','')
+			slices = line.split(',')
+			lat = slices[0]
+			lon = slices[1]
+			pointlist.append((float(lat),float(lon)))
+
+		return pointlist
 
 
 
