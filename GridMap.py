@@ -123,8 +123,7 @@ class GridMap:
 						'total_variable': 0,
 						'date_time': list(),
 						'in_territory': False,
-						'crimes_per_window': {},
-						'attributes_per_window': {},
+						'variable_per_window': {},
 						'label': None,
 						'train_or_test': None}
 				
@@ -147,11 +146,11 @@ class GridMap:
 				if (self.grid[l][c]['leftlon'] <= lon <= self.grid[l][c]['rightlon']) and (self.grid[l][c]['lowerlat'] <= lat <= self.grid[l][c]['upperlat']):
 					return (l, c)
 	
-	def add_crime(self, l, c, date, time):
+	def add_variable(self, l, c, date, time):
 		self.grid[l][c]['total_variable'] += 1
 		self.grid[l][c]['date_time'].append((date, time))
 	
-	def get_max_crimes(self):
+	def get_max_variable(self):
 		maxim = 0
 		for l in range(0, self.step):
 			for c in range(0, self.step):
@@ -160,8 +159,8 @@ class GridMap:
 					all_max = self.grid[l][c]
 		return all_max
 
-	def get_min_crimes(self):
-		maxim = self.get_max_crimes()['total_variable']
+	def get_min_variable(self):
+		maxim = self.get_max_variable()['total_variable']
 		minim = maxim
 		for l in range(0, self.step):
 			for c in range(0, self.step):
@@ -170,17 +169,17 @@ class GridMap:
 					all_min = self.grid[l][c]
 		return all_min
 
-	def get_crime_by_cell(self, lowercell, uppercell, inTerritory=False):
-		crime_by_cell = list()        
+	def get_variable_by_cell(self, lowercell, uppercell, inTerritory=False):
+		variable_by_cell = list()        
 		for l in range(lowercell[0], uppercell[0]+1):
 			for c in range(lowercell[1], uppercell[1]+1):
 				if inTerritory == True:
 					if self.grid[l][c]['in_territory'] == True:
-						crime_by_cell.append([(l, c), self.grid[l][c]['total_variable']])
+						variable_by_cell.append([(l, c), self.grid[l][c]['total_variable']])
 				else:
-					crime_by_cell.append([(l, c), self.grid[l][c]['total_variable']])
+					variable_by_cell.append([(l, c), self.grid[l][c]['total_variable']])
 
-		return crime_by_cell
+		return variable_by_cell
 
 	def set_borders(self, basemap, shapearray, force=False, key=None, value=None, shapeinfo=None):
 		in_borders = []
@@ -316,23 +315,23 @@ class GridMap:
 
 
 
-	def add_crimes_per_window(self, l, c, window):
-		if window in self.grid[l][c]['crimes_per_window']:
-			self.grid[l][c]['crimes_per_window'][window] += 1
+	def add_variable_per_window(self, l, c, window):
+		if window in self.grid[l][c]['variable_per_window']:
+			self.grid[l][c]['variable_per_window'][window] += 1
 		else:
-			self.grid[l][c]['crimes_per_window'][window] = 1
+			self.grid[l][c]['variable_per_window'][window] = 1
 		
 
 	def set_window(self, windowstruct):
 		self.window = windowstruct
 
 
-	def set_labels_with_threshold(self, crimes_cell_list, label_list, min_crimes=2):
+	def set_labels_with_threshold(self, variable_cell_list, label_list, min_variable=2):
 		#TODO: works only for binary classification
-		for cells in crimes_cell_list:
-			num_crimes = cells[1]
+		for cells in variable_cell_list:
+			num_variable = cells[1]
 
-			if num_crimes > min_crimes:
+			if num_variable > min_variable:
 				self.grid[cells[0][0]][cells[0][1]]['label'] = label_list[1]
 			else:
 				self.grid[cells[0][0]][cells[0][1]]['label'] = label_list[0]
@@ -354,39 +353,39 @@ class GridMap:
 		return label_count
 
 
-	def set_labels_per_range(self, crimes_cell_list, label_list):
+	def set_labels_per_range(self, variable_cell_list, label_list):
 
-		crimes_list = crimes_cell_list[:]
-		crimes_with_label = list()
-		crimes_list = sorted(crimes_list, key = lambda x: int(x[1]))
+		variable_list = variable_cell_list[:]
+		variable_with_label = list()
+		variable_list = sorted(variable_list, key = lambda x: int(x[1]))
 
 		n = len(label_list)
 		block_label = 0
 		for i in range(n, 0, -1):
-			group = round(len(crimes_list)/i)
-			c = crimes_list[:int(group)]
-			crimes_list = crimes_list[int(group):]
+			group = round(len(variable_list)/i)
+			c = variable_list[:int(group)]
+			variable_list = variable_list[int(group):]
 			for j in c:
 				j.append(label_list[block_label])
-				crimes_with_label.append(j)
+				variable_with_label.append(j)
 			block_label+=1
 
-		for cells in crimes_with_label:
+		for cells in variable_with_label:
 			cell = cells[0]
 			self.grid[cell[0]][cell[1]]['label'] = cells[2]
 	
-		return crimes_with_label
+		return variable_with_label
 
 	#TDOD: Change the methodology of sampling for stratified sampling
-	def set_train_test_distribution(self, crimes_cell_list, slices=4, train_size=0.7):
+	def set_train_test_distribution(self, variable_cell_list, slices=4, train_size=0.7):
 		range_distribution = {'train': list(), 'test': list()} 
-		crimes_list = crimes_cell_list[:]
-		crimes_with_label = list()
+		variable_list = variable_cell_list[:]
+		variable_with_label = list()
 	   
 		for i in range(slices, 0, -1):
-			group = round(len(crimes_list)/i)
-			c = crimes_list[:int(group)]
-			crimes_list = crimes_list[int(group):]
+			group = round(len(variable_list)/i)
+			c = variable_list[:int(group)]
+			variable_list = variable_list[int(group):]
 			#split c block in train and test
 			train = round(len(c) * train_size)
 			test = len(c) - train
@@ -592,10 +591,10 @@ class GridMap:
 		fr.close()
 
 
-	def gen_imagelist_with_label(self, cell_path, crimes_with_label, filename="imageListLabels.list"):
+	def gen_imagelist_with_label(self, cell_path, variable_with_label, filename="imageListLabels.list"):
 		fw = open(filename, 'w')
 		fw.write('line,column,file,label\n')
-		for cell in crimes_with_label:
+		for cell in variable_with_label:
 			l = cell[0][0]
 			c = cell[0][1]
 			label = cell[2]
@@ -603,17 +602,17 @@ class GridMap:
 			for file in sorted(os.listdir(directory)):
 				fw.write(str(l) + "," + str(c) + "," + file + "," + label + "\n")
 
-	def gen_images_dict(self, cell_path, crimes_with_label):
+	def gen_images_dict(self, cell_path, variable_with_label):
 		# create dictionary with all files
 		dictimages = {}
 		cell_labels = {}
-		for cell in crimes_with_label:
+		for cell in variable_with_label:
 			if not cell[2] in dictimages:
 				dictimages[cell[2]] = {}
-		for cell in crimes_with_label:
+		for cell in variable_with_label:
 			if not cell[2] in cell_labels:
 				cell_labels[cell[2]] = []
-		for cell in crimes_with_label:
+		for cell in variable_with_label:
 			cell_labels[cell[2]].append((cell[0][0], cell[0][1]))
 
 		print(dictimages)
@@ -767,13 +766,13 @@ class GridMap:
 				basemap.plot([low_lat[0], low_lat[1]], [up_lat[0], up_lat[1]], 'bo-', markersize=marksize, linewidth=0.6)
 				basemap.plot(centroid[0], centroid[1], 'bo-', markersize=marksize, linewidth=linewidth)
 				
-	def plot_crime(self, basemap, lon, lat, mark, size, linewidth):
+	def plot_variable(self, basemap, lon, lat, mark, size, linewidth):
 		self.plot_grid(basemap, 1, linewidth)
 		lon_, lat_ = basemap(lon, lat)
 		basemap.plot(lon_, lat_, mark, markersize=size)
 
 		
-	def distribute_crimes(self, basemap, data, linewidth):
+	def distribute_variable(self, basemap, data, linewidth):
 		self.plot_grid(basemap, 0, linewidth)
 
 		total_variable = []
@@ -800,7 +799,7 @@ class GridMap:
 		
 		x, y, z = xlon, ylat, total_variable
 		zi = griddata(x, y, z, xi, yi, interp='linear')
-		m = basemap.contourf(xi, yi, zi, vmin=1, vmax=self.get_max_crimes()['total_variable'], alpha=0.5)
+		m = basemap.contourf(xi, yi, zi, vmin=1, vmax=self.get_max_variable()['total_variable'], alpha=0.5)
 		cb = basemap.colorbar(m, location='bottom', pad="5%")
 		
 		
@@ -827,7 +826,7 @@ class GridMap:
 						
 						x, y, z = data.X.values, data.Y.values, data.Z.values
 						zi = griddata(x, y, z, xi, yi, interp='linear')
-						cs = basemap.contourf(xi, yi, zi, vmin=1, vmax=self.get_max_crimes()['total_variable'], cmap = plt.cm.jet, alpha=0.5)
+						cs = basemap.contourf(xi, yi, zi, vmin=1, vmax=self.get_max_variable()['total_variable'], cmap = plt.cm.jet, alpha=0.5)
 						
 
 	def street_points(self, basemap, corner_list, interpol_list, cmark='g', imark='b'):
@@ -904,7 +903,7 @@ class GridMap:
 
 
 	# def show_colorbar(self, basemap):
-	#     plt.clim(0,self.get_max_crimes()['total_variable'], cmap = plt.cm.jet, alpha=0.5)
+	#     plt.clim(0,self.get_max_variable()['total_variable'], cmap = plt.cm.jet, alpha=0.5)
 
 
 
