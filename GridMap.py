@@ -388,13 +388,20 @@ class GridMap:
 		cb = basemap.colorbar(m, location='bottom', pad="5%")
 		
 		
-	def hot_spot(self, basemap, linewidth):
+	def hot_spot(self, basemap, linewidth, colorbar=False):
 		self.plot_grid(basemap, 0, linewidth)
+
+		distribution = []
+		total = 0
 
 		for l in range(0, self.step):
 			for c in range(0, self.step):
 				if self.grid[l][c]['total_variable'] > 0:
 					if self.grid[l][c]['in_territory'] == True:
+						total+=1
+						attr = self.grid[l][c]['total_variable']
+						distribution.append(attr)
+
 						left_lon1, right_lon1 = basemap([self.grid[l][c]['leftlon'], self.grid[l][c]['rightlon']], [self.grid[l][c]['lowerlat'], self.grid[l][c]['lowerlat']])
 						left_lon2, right_lon2 = basemap([self.grid[l][c]['leftlon'], self.grid[l][c]['rightlon']], [self.grid[l][c]['upperlat'], self.grid[l][c]['upperlat']])
 						low_lat1, up_lat1 = basemap([self.grid[l][c]['rightlon'], self.grid[l][c]['rightlon']], [self.grid[l][c]['lowerlat'], self.grid[l][c]['upperlat']])
@@ -412,7 +419,16 @@ class GridMap:
 						x, y, z = data.X.values, data.Y.values, data.Z.values
 						zi = griddata(x, y, z, xi, yi, interp='linear')
 						cs = basemap.contourf(xi, yi, zi, vmin=1, vmax=self.get_max_variable()['total_variable'], cmap = plt.cm.jet, alpha=0.5)
-						
+
+		if colorbar == True:
+			ord_distribution = np.sort(distribution)
+			cmap = plt.cm.jet
+			norm = mpl.colors.Normalize(vmin=1, vmax=ord_distribution[total-1])
+			sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
+			sm.set_array([])
+			cbar = basemap.colorbar(sm)
+			cbar.ax.tick_params(labelsize=25)
+
 
 	def street_points(self, basemap, corner_list, interpol_list, cmark='g', imark='b'):
 		#corner_list, interpol_list = lat, lon
