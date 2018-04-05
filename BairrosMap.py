@@ -28,8 +28,38 @@ class Point:
 
 
 
-class Streets:
-	pass
+class StreetMap:
+	def __init__( self, basemap, street_shapeinfo, street_shapearray ):
+		
+		pointmap = []
+		lonlat = []
+
+		for info, shape in zip( street_shapeinfo, street_shapearray ):
+			# extract points from streets
+			for point in shape:
+				lon, lat = basemap( point[0], point[1], inverse=True )
+				lonlat.append( (lon, lat) )
+
+		# Remove duplicate points (crossovers, corners)
+		lonlat = list( set(lonlat) )
+		for lon, lat in lonlat:
+			pointmap.append( Point(basemap, lon, lat) )
+
+		self.pointmap = pointmap
+		self.size = len(pointmap)
+
+	def get_streetpoint( self, index ):
+		return { 'index': index,
+				 'lon' : self.pointmap[index].lon,
+				 'lat' : self.pointmap[index].lat,
+				 'x' : self.pointmap[index].x,
+				 'y' : self.pointmap[index].y,
+				 'cod_bairro' : self.pointmap[index].cod_bairro,
+				 'total_variable' : self.pointmap[index].total_variable,
+				 'label': self.pointmap[index].label,
+				 'train_or_test': self.pointmap[index].train_or_test,
+				 'in_territory': self.pointmap[index].in_territory
+				}
 
 
 class PointMap:
@@ -66,10 +96,6 @@ class PointMap:
 				 'train_or_test': self.pointmap[index].train_or_test,
 				 'in_territory': self.pointmap[index].in_territory
 				}
-
-
-
-		
 
 
 class BairrosMap:
@@ -130,8 +156,8 @@ class BairrosMap:
 				point.train_or_test = self.grid_bairros[i]['train_or_test']
 
 
-	def set_pointmap_bairro( self, pmap ):
-		for i, point in zip ( range(pmap.size), pmap.pointmap ):
+	def set_streetmap_bairro( self, streetmap ):
+		for i, point in zip ( range(streetmap.size), streetmap.pointmap ):
 			self.set_point_bairro( point )
 
 	def set_pointlist_bairro( self, pointlist ):
@@ -139,6 +165,11 @@ class BairrosMap:
 			pass
 
 			
+	def set_attribute( self, cod_bairro, value=1 ):
+		for bairro in self.grid_bairros:
+			if bairro['bairro_code'] == cod_bairro:
+				bairro['total_variable'] += value
+
 			
 
 
