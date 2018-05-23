@@ -48,7 +48,7 @@ class StreetMap:
 		self.pointmap = pointmap
 		self.size = len(pointmap)
 
-	def get_streetpoint( self, index ):
+	def get_pointstreetpoint( self, index ):
 		return { 'index': index,
 				 'lon' : self.pointmap[index].lon,
 				 'lat' : self.pointmap[index].lat,
@@ -105,37 +105,60 @@ class BairrosMap:
 		self.shape_info = shapeinfo
 		self.shape_array = shapearray
 		self.code_bairro_key = code_bairro_key
-		self.size = len(shapearray)
-		self.grid_bairros = [i for i in range(self.size)]
 
+		
+		#Compute bairro list
+		bairro_codes = list()
+		for info, shape in zip( self.shape_info, self.shape_array ):
+			bairro_codes.append(int(info[code_bairro_key]))
+		self.code_bairros = set(bairro_codes)
 
-		for i, info, shape in zip( range(self.size), self.shape_info, self.shape_array ):
+		self.size = len(self.code_bairros)
+		self.grid_bairros = [i for i in range(self.size+1)]
+
+		for code in self.code_bairros:
+			bairro = { 'index': code,
+						'bairro_shape_x': list(),
+						'bairro_shape_y': list(),
+						'bairro_shape_lon': list(),
+						'bairro_shape_lat': list(),
+						'bairro_shape' : list(),
+						'bairro_polygon': list(),
+						'bairro_code': code,
+						'bairro_name': list(),
+						'attributes' : None,
+						'total_variable' : 0,
+						'label': None,
+						'train_or_test': None,
+						}
+			self.grid_bairros[code] = bairro
+
+		for info, shape in zip( self.shape_info, self.shape_array ):
+
 			if bairro_name_key!=None:
 				bairro_name = info[bairro_name_key]
 			else:
 				bairro_name = None
 
+			code = int(info[code_bairro_key])
+
 			x, y = zip(*shape)
 			lon, lat = basemap(x, y, inverse=True)
-			
-			bairro = {  'index': i,
-						'bairro_shape_x': x,
-						'bairro_shape_y': y,
-						'bairro_shape_lon': lon,
-						'bairro_shape_lat': lat,
-						'bairro_polygon': Polygon(shape),
-						'bairro_code': info[code_bairro_key],
-						'bairro_name': bairro_name,
-						'attributes' : None,
-						'total_variable' : None,
-						'label': None,
-						'train_or_test': None,
-						}
 
-			self.grid_bairros[i] = bairro
+			self.grid_bairros[code]['bairro_shape_x'].append(x)
+			self.grid_bairros[code]['bairro_shape_y'].append(y)
+			self.grid_bairros[code]['bairro_shape_lon'].append(lon)
+			self.grid_bairros[code]['bairro_shape_lat'].append(lat)
+			self.grid_bairros[code]['bairro_shape'].append(shape)
+			self.grid_bairros[code]['bairro_polygon'].append(Polygon(shape))
+			self.grid_bairros[code]['bairro_name'].append(bairro_name)
 
 
-	def check_bairro(self, cod_bairro, point):
+	def bairro_size(self, code, objct):
+		return len(self.grid_bairros[int(code)][str(objct)])
+	
+
+	def check_point(self, cod_bairro, point):
 		for i, info, shape in zip( range(self.size), self.shape_info, self.shape_array ):
 			if info[self.code_bairro_key] == cod_bairro:
 				#x, y = basemap(lon, lat)
@@ -145,6 +168,13 @@ class BairrosMap:
 		
 				return iswithin
 
+	def check_point_bairro( self, cod_bairro, point):
+		pt = Pt(point.x, point.y)
+		for polygon in self.grid_bairros[cod_bairro]['bairro_polygon']:
+			if pt.within(polygon):
+				return True
+
+		
 	def set_point_bairro(self, point):
 		for i, info, shape in zip( range(self.size), self.shape_info, self.shape_array ):
 			iswithin = self.check_bairro(info[self.code_bairro_key], point)
@@ -165,10 +195,18 @@ class BairrosMap:
 			pass
 
 			
-	def set_attribute( self, cod_bairro, value=1 ):
+	def set_variable_codbairro( self, cod_bairro, value=1 ):
 		for bairro in self.grid_bairros:
 			if bairro['bairro_code'] == cod_bairro:
 				bairro['total_variable'] += value
+
+	def set_variable_point( self, point ):
+		for cod_bairro in self.code_bairros:
+			if self.check_point_bairro( cod_bairro, point ):
+				self.grid_bairros[cod_bairro]['total_variable'] += 1
+
+
+
 
 			
 
