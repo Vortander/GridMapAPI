@@ -101,7 +101,8 @@ class VariablePoint:
 		self.norm_value = None
 
 class StreetPoint:
-	def __init__(self, basemap, lon, lat):
+	def __init__(self, basemap, idx, lon, lat):
+		self.idx = idx
 		self.lon = lon
 		self.lat = lat
 		self.x, self.y = basemap( lon, lat )
@@ -177,16 +178,23 @@ class GridMap:
 		#Return FALSE if NOT near border, TRUE it near border
 		return (border1_online or border2_online or border3_online or border4_online)
 
-	def add_variable(self, l, c, VariablePoint, test_borders=True, date=0, time=0):
+	def add_variable(self, l, c, VariablePoint, test_borders=True, distance_meters=0.150, date=0, time=0):
 		if test_borders == True:
-			if self.test_borders( l, c, VariablePoint.lon, VariablePoint.lat, 0.150 )	== False:
+			if self.test_borders( l, c, VariablePoint.lon, VariablePoint.lat, distance_meters ) == False:
 				self.grid[l][c]['variable_points'].append(VariablePoint)
 				self.grid[l][c]['total_variable'] += 1
 		else:
 			self.grid[l][c]['variable_points'].append(VariablePoint)
 			self.grid[l][c]['total_variable'] += 1
 			#self.grid[l][c]['date_time'].append((date, time))
-	
+
+	def add_street_point(self, l, c, StreetPoint, test_borders=True, distance_meters=0.150):
+		if test_borders == True:
+			if self.test_borders( l, c, StreetPoint.lon, StreetPoint.lat, distance_meters ) == False:
+				self.grid[l][c]['street_points'].append(StreetPoint)
+		else:
+			self.grid[l][c]['street_points'].append(StreetPoint)
+
 	def get_max_variable(self):
 		maxim = 0
 		for l in range(0, self.step):
