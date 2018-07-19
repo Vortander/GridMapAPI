@@ -101,8 +101,8 @@ class VariablePoint:
 		self.norm_value = None
 
 class StreetPoint:
-	def __init__(self, basemap, idx, lon, lat):
-		self.idx = idx
+	def __init__(self, basemap, id, lon, lat):
+		self.id = id
 		self.lon = lon
 		self.lat = lat
 		self.x, self.y = basemap( lon, lat )
@@ -477,10 +477,8 @@ class GridMap:
 
 	def plot_variable_points(self, basemap, name=None, color='g', mark='b'):
 		self.plot_grid(basemap, 0, 1.0)
-		
 		lons = []
 		lats = []
-
 		for l in range(0, self.step):
 			for c in range(0, self.step):
 				for point in self.grid[l][c]['variable_points']:
@@ -489,6 +487,17 @@ class GridMap:
 
 		basemap.scatter(lons, lats, marker=mark, color=color)
 
+	def plot_street_points(self, basemap, color='b', mark='o'):
+		self.plot_grid(basemap, 0, 1.0)
+		lons = []
+		lats = []
+		for l in range(0, self.step):
+			for c in range(0, self.step):
+				for point in self.grid[l][c]['street_points']:
+					lons.append(point.x)
+					lats.append(point.y)
+
+		basemap.scatter(lons, lats, marker=mark, color=color)
 
 	def street_points(self, basemap, corner_list, interpol_list, cmark='g', imark='b'):
 		#corner_list, interpol_list = lat, lon
