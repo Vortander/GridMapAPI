@@ -70,7 +70,6 @@ def _near_line(x2, y2, x1, y1, x3, y3, meters):
 	return False
 
 class Window:
-
 	def __init__(self, wintype, ystart, yend, mstart = 1, mend = 12):
 		# default all struct set by year
 		self.years = [i for i in range(ystart, yend + 1)]
@@ -89,6 +88,15 @@ class Window:
 					for m in range(mstart, mend + 1):
 						self.window.append((y, int(str(m).zfill(2)), wincount))
 						wincount += 1
+
+class VariablePoint:
+	def __init__(self, basemap, lon, lat, name=''):
+		self.lon = lon
+		self.lat = lat
+		self.x, self.y = basemap( lon, lat )
+		self.name = name
+
+
 
 class GridMap:
 	#lowerleftlon, lowerleftlat = x1,y1
@@ -145,10 +153,25 @@ class GridMap:
 			for c in range(0, self.step):
 				if (self.grid[l][c]['leftlon'] <= lon <= self.grid[l][c]['rightlon']) and (self.grid[l][c]['lowerlat'] <= lat <= self.grid[l][c]['upperlat']):
 					return (l, c)
-	
-	def add_variable(self, l, c, date, time):
-		self.grid[l][c]['total_variable'] += 1
-		self.grid[l][c]['date_time'].append((date, time))
+
+	def test_borders(self, l, c, lon, lat, distance_meters):
+		border1_online = self._near_line( self.grid[l][c]['leftlon'], self.grid[l][c]['upperlat'], self.grid[l][c]['leftlon'], self.grid[l][c]['lowerlat'], float(lon), float(lat), float(distance_meters))
+		border2_online = self._near_line( self.grid[l][c]['rightlon'], self.grid[l][c]['upperlat'], self.grid[l][c]['rightlon'], self.grid[l][c]['lowerlat'], float(lon), float(lat), float(distance_meters))
+		border3_online = self._near_line( self.grid[l][c]['rightlon'], self.grid[l][c]['lowerlat'], self.grid[l][c]['leftlon'], self.grid[l][c]['lowerlat'], float(lon), float(lat), float(distance_meters))
+		border4_online = self._near_line( self.grid[l][c]['rightlon'], self.grid[l][c]['upperlat'], self.grid[l][c]['leftlon'], self.grid[l][c]['upperlat'], float(lon), float(lat), float(distance_meters))
+
+		#Return FALSE if NOT near border, TRUE it near border
+		return (border1_online or border2_online or border3_online or border4_online)
+
+	def add_variable(self, l, c, VariablePoint, test_borders=True, date=0, time=0):
+		if test_borders == True:
+			if self.test_borders( l, c, VariablePoint.lon, VariablePoint.lat, 0.150 )	== False:
+				self.grid[l][c]['variable_points'].append(VariablePoint)
+				self.grid[l][c]['total_variable'] += 1
+		else:
+			self.grid[l][c]['variable_points'].append(VariablePoint)
+			self.grid[l][c]['total_variable'] += 1
+			#self.grid[l][c]['date_time'].append((date, time))
 	
 	def get_max_variable(self):
 		maxim = 0
@@ -429,6 +452,20 @@ class GridMap:
 			sm.set_array([])
 			cbar = basemap.colorbar(sm)
 			cbar.ax.tick_params(labelsize=25)
+
+	def plot_variable_points(self, basemap, name=None, color='g', mark='b'):
+		self.plot_grid(basemap, 0, 1.0)
+		
+		lons = []
+		lats = []
+
+		for l in range(0, self.step):
+			for c in range(0, self.step):
+				for point in self.grid[l][c]['variable_points']:
+					lons.append(point.x)
+					lats.append(point.y)
+
+		basemap.scatter(lons, lats, marker=mark, color=color)
 
 
 	def street_points(self, basemap, corner_list, interpol_list, cmark='g', imark='b'):
