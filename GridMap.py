@@ -178,21 +178,46 @@ class GridMap:
 		#Return FALSE if NOT near border, TRUE it near border
 		return (border1_online or border2_online or border3_online or border4_online)
 
-	def add_variable(self, l, c, VariablePoint, test_borders=True, distance_meters=0.150, date=0, time=0):
-		if test_borders == True:
+	def add_variable(self, l, c, VariablePoint, test_borders=True, distance_meters=0.150, in_territory=True, date=0, time=0):
+		# add variable to cell, test if is near borders, and if inside territory (needs set_borders method first)
+		if test_borders == True and in_territory == True:
+			if self.test_borders( l, c, VariablePoint.lon, VariablePoint.lat, distance_meters ) == False:
+				if self.grid[l][c]['in_territory'] == True:
+					self.grid[l][c]['variable_points'].append(VariablePoint)
+					self.grid[l][c]['total_variable'] += 1
+
+		if test_borders == True and in_territory == False:
 			if self.test_borders( l, c, VariablePoint.lon, VariablePoint.lat, distance_meters ) == False:
 				self.grid[l][c]['variable_points'].append(VariablePoint)
 				self.grid[l][c]['total_variable'] += 1
-		else:
+
+		if test_borders == False and in_territory == True:
+			if self.grid[l][c]['in_territory'] == True:
+				self.grid[l][c]['variable_points'].append(VariablePoint)
+				self.grid[l][c]['total_variable'] += 1
+
+		if test_borders == False and in_territory == False:
 			self.grid[l][c]['variable_points'].append(VariablePoint)
 			self.grid[l][c]['total_variable'] += 1
+
 			#self.grid[l][c]['date_time'].append((date, time))
 
-	def add_street_point(self, l, c, StreetPoint, test_borders=True, distance_meters=0.150):
-		if test_borders == True:
+	def add_street_point(self, l, c, StreetPoint, test_borders=True, distance_meters=0.150, in_territory=True):
+		# add street point to cell, test if is near borders and if is inside territory (needs set_borders first)
+		if test_borders == True and in_territory == True:
+			if self.test_borders( l, c, StreetPoint.lon, StreetPoint.lat, distance_meters ) == False:
+				if self.grid[l][c]['in_territory'] == True:
+					self.grid[l][c]['street_points'].append(StreetPoint)
+
+		if test_borders == True and in_territory == False:
 			if self.test_borders( l, c, StreetPoint.lon, StreetPoint.lat, distance_meters ) == False:
 				self.grid[l][c]['street_points'].append(StreetPoint)
-		else:
+
+		if test_borders == False and in_territory == True:
+			if self.grid[l][c]['in_territory'] == True:
+				self.grid[l][c]['street_points'].append(StreetPoint)
+
+		if test_borders == False and in_territory == False:
 			self.grid[l][c]['street_points'].append(StreetPoint)
 
 	def get_max_variable(self):
