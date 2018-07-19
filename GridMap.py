@@ -120,6 +120,7 @@ class GridMap:
 						'cell': (l, c),
 						'centroid': [cell_lowerleftlon + cen_lon, cell_lowerleftlat + cen_lat],
 						'total_variable': 0,
+						'variable_points': list(),
 						'date_time': list(),
 						'in_territory': False,
 						'variable_per_window': {},
