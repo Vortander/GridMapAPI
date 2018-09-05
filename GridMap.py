@@ -17,6 +17,9 @@ from shutil import copy2
 from random import randint
 from scipy.misc import imread
 
+def _create_basemap( llcrnrlon, llcrnrlat, urcrnrlon, urcrnrlat, resolution='l', epsg = 5641):
+	return Basemap(llcrnrlon, llcrnrlat, urcrnrlon, urcrnrlat, resolution, epsg)
+
 def _haversine(lat1, lon1, lat2, lon2):
 	R = 6378.137
 	dLat = lat2 * math.pi / 180 - lat1 * math.pi / 180
@@ -143,6 +146,7 @@ class GridMap:
 						'centroid': [cell_lowerleftlon + cen_lon, cell_lowerleftlat + cen_lat],
 						'total_variable': 0,
 						'variable_points': list(),
+						'total_street_points': 0,
 						'street_points': list(),
 						'date_time': list(),
 						'in_territory': False,
@@ -208,17 +212,22 @@ class GridMap:
 			if self.test_borders( l, c, StreetPoint.lon, StreetPoint.lat, distance_meters ) == False:
 				if self.grid[l][c]['in_territory'] == True:
 					self.grid[l][c]['street_points'].append(StreetPoint)
+					self.grid[l][c]['total_street_points'] += 1
 
 		if test_borders == True and in_territory == False:
 			if self.test_borders( l, c, StreetPoint.lon, StreetPoint.lat, distance_meters ) == False:
 				self.grid[l][c]['street_points'].append(StreetPoint)
+				self.grid[l][c]['total_street_points'] += 1
 
 		if test_borders == False and in_territory == True:
 			if self.grid[l][c]['in_territory'] == True:
 				self.grid[l][c]['street_points'].append(StreetPoint)
+				self.grid[l][c]['total_street_points'] += 1
 
 		if test_borders == False and in_territory == False:
 			self.grid[l][c]['street_points'].append(StreetPoint)
+			self.grid[l][c]['total_street_points'] += 1
+
 
 	def get_max_variable(self):
 		maxim = 0
@@ -250,6 +259,25 @@ class GridMap:
 					variable_by_cell.append([(l, c), self.grid[l][c]['total_variable']])
 
 		return variable_by_cell
+
+	def get_maxtotal_streetpoints(self):
+		maxim = 0
+		for l in range(0, self.step):
+			for c in range(0, self.step):
+				if self.grid[l][c]['total_street_points'] > maxim:
+					maxim = self.grid[l][c]['total_street_points']
+					all_max = self.grid[l][c]
+		return all_max
+
+	def get_mintotal_streetpoints(self):
+		maxim = self.get_maxtotal_streetpoints()['total_stret_points']
+		minim = maxim
+		for l in range(0, self.step):
+			for c in range(0, self.step):
+				if (self.grid[l][c]['total_street_points'] < minim) and (self.grid[l][c]['total_street_points'] > 0):
+					minim = self.grid[l][c]['total_street_points']
+					all_min = self.grid[l][c]
+		return all_min
 
 	def set_borders(self, basemap, shapearray, force=False, key=None, value=None, shapeinfo=None):
 		in_borders = []
@@ -421,7 +449,24 @@ class GridMap:
 				basemap.plot([left_lon[0], left_lon[1]], [right_lon[0], right_lon[1]], 'bo-', markersize=marksize, linewidth=0.6)
 				basemap.plot([low_lat[0], low_lat[1]], [up_lat[0], up_lat[1]], 'bo-', markersize=marksize, linewidth=0.6)
 				basemap.plot(centroid[0], centroid[1], 'bo-', markersize=marksize, linewidth=linewidth)
-				
+
+	def plot_subgrid(self, subbasemap, lower_left_cell, upper_right_cell, marksize=0, linewidth=0.6 ):
+		for l in range(lower_left_cell[0], upper_right_cell[0] + 1):
+			for c in range(lower_left_cell[1], upper_right_cell[1] + 1):
+				left_lon, right_lon = subbasemap([self.grid[l][c]['leftlon'], self.grid[l][c]['rightlon']], [self.grid[l][c]['lowerlat'], self.grid[l][c]['lowerlat']])
+				low_lat, up_lat = subbasemap([self.grid[l][c]['rightlon'], self.grid[l][c]['rightlon']], [self.grid[l][c]['lowerlat'], self.grid[l][c]['upperlat']])
+				centroid = subbasemap(self.grid[l][c]['centroid'][0], self.grid[l][c]['centroid'][1])
+				subbasemap.plot([left_lon[0], left_lon[1]], [right_lon[0], right_lon[1]], 'bo-', markersize=marksize, linewidth=0.6)
+				subbasemap.plot([low_lat[0], low_lat[1]], [up_lat[0], up_lat[1]], 'bo-', markersize=marksize, linewidth=0.6)
+				subbasemap.plot(centroid[0], centroid[1], 'bo-', markersize=marksize, linewidth=linewidth)
+
+	def get_subbasemap(self, lower_left_cell, upper_right_cell, resolution='l', epsg= 5641 ):
+		return _create_basemap( llcrnrlon=self.grid[lower_left_cell[0]][lower_left_cell[1]]['leftlon'],
+									  llcrnrlat=self.grid[lower_left_cell[0]][lower_left_cell[1]]['lowerlat'],
+									  urcrnrlon=self.grid[upper_right_cell[0]][upper_right_cell[1]]['rightlon'],
+									  urcrnrlat=self.grid[upper_right_cell[0]][upper_right_cell[1]]['upperlat'],
+									  resolution='l', epsg = 5641 )
+
 	def plot_variable(self, basemap, lon, lat, mark, size, linewidth):
 		self.plot_grid(basemap, 1, linewidth)
 		lon_, lat_ = basemap(lon, lat)
@@ -500,15 +545,38 @@ class GridMap:
 			cbar = basemap.colorbar(sm)
 			cbar.ax.tick_params(labelsize=25)
 
-	def plot_variable_points(self, basemap, name=None, color='g', mark='b'):
-		self.plot_grid(basemap, 0, 1.0)
+	def plot_variable_points(self, basemap, submap=False, lower_left_cell=None, upper_right_cell=None, name=None, color='g', mark='b'):
 		lons = []
 		lats = []
-		for l in range(0, self.step):
-			for c in range(0, self.step):
+		if submap == False:
+			self.plot_grid(basemap, 0, 1.0)
+			start_l, start_c = 0, 0
+			end_l, end_c = self.step, self.step
+
+		else:
+			self.plot_subgrid( basemap, lower_left_cell, upper_right_cell, 0, 1.0 )
+			start_l, start_c = lower_left_cell[0], lower_left_cell[1]
+			end_l, end_c = upper_right_cell[0]+1, upper_right_cell[1]+1
+
+		for l in range(start_l, end_l):
+			for c in range(start_c, end_c):
 				for point in self.grid[l][c]['variable_points']:
-					lons.append(point.x)
-					lats.append(point.y)
+					lons.append(point.lon)
+					lats.append(point.lat)
+
+
+		# for l in range(0, self.step):
+		# 	for c in range(0, self.step):
+		# 		for point in self.grid[l][c]['variable_points']:
+		# 			lons.append(point.x)
+		# 			lats.append(point.y)
+
+
+		# for l in range(lower_left_cell[0], upper_right_cell[0]+1):
+		# 	for c in range(lower_left_cell[1], upper_right_cell[1]+1):
+		# 		for point in self.grid[l][c]['variable_points']:
+		# 			lons.append(point.lon)
+		# 			lats.append(point.lat)
 
 		basemap.scatter(lons, lats, marker=mark, color=color)
 

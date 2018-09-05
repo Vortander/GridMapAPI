@@ -1,10 +1,10 @@
 from GridMapAPI.GridMap import GridMap
 from GridMapAPI.GridMap import VariablePoint
 from GridMapAPI.GridMap import StreetPoint
-from GridMapAPI.BairrosMap import Point
-from GridMapAPI.BairrosMap import PointMap
-from GridMapAPI.BairrosMap import StreetMap
-from GridMapAPI.BairrosMap import BairrosMap
+from GridMapAPI.SectorMap import Point
+from GridMapAPI.SectorMap import PointMap
+from GridMapAPI.SectorMap import StreetMap
+from GridMapAPI.SectorMap import SectorMap
 import GridMapAPI.utils
 import GridMapAPI.sampling
 import GridMapAPI.shape

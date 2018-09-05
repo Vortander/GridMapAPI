@@ -4,6 +4,10 @@ import math
 from mpl_toolkits.basemap import Basemap
 import ast
 
+from rtree import index as Indx
+from shapely.geometry import shape as GeoShape
+from shapely.geometry import Polygon
+from shapely.geometry import Point as Pt
 
 # Street and shapefile manipulation methods
 
@@ -45,7 +49,7 @@ def generate_inter_points(finalshape):
 				current_lon = finalshape[key][i][1]
 				next_lat = finalshape[key][i+1][0]
 				next_lon = finalshape[key][i+1][1]
-				
+
 				interpos = []
 				# check if the distance between the 2 points is more than 100 meters
 				meters = _haversine(current_lat, current_lon, next_lat, next_lon)
@@ -88,7 +92,7 @@ def gen_pointlist_from_shapefile(finalshape, interpolated, filename="pointListFr
 		for point in finalshape[line]:
 			corner_list.append(point)
 			fw.write(str(point) + '\n')
-	
+
 	for line in interpolated[0].keys():
 		for sect in interpolated[0][line]:
 			for point in sect:
@@ -100,7 +104,7 @@ def gen_pointlist_from_shapefile(finalshape, interpolated, filename="pointListFr
 
 def plot_street_points(basemap, corner_list, interpol_list, cmark='g', imark='b'):
 		#corner_list, interpol_list = lat, lon
-		
+
 		corner_lats = []
 		corner_lons = []
 		interpol_lats = []
@@ -115,7 +119,7 @@ def plot_street_points(basemap, corner_list, interpol_list, cmark='g', imark='b'
 			lon, lat = basemap(latlon[1], latlon[0])
 			interpol_lons.append(lon)
 			interpol_lats.append(lat)
-			
+
 		basemap.scatter(corner_lons, corner_lats, marker='D',color='m')
 		basemap.scatter(interpol_lons, interpol_lats, marker='o',color='b')
 
@@ -126,7 +130,7 @@ def plot_street_points_fromfile(basemap, filename, color='m'):
 
 	plats = []
 	plons = []
-	
+
 	for point in points:
 		p = ast.literal_eval(point)
 		lon, lat = basemap(p[1], p[0])
@@ -135,8 +139,15 @@ def plot_street_points_fromfile(basemap, filename, color='m'):
 
 	basemap.scatter(plons, plats, marker='o',color=color)
 
+# Generate rtree from shapefile
+def generate_rtree( shapeinfo, shapearray, sector_key_name=None ):
+	idx = Indx.Index()
+	for pos, poly in zip( shapeinfo, shapearray ):
+		idx.insert(int(pos[sector_key_name]), GeoShape(Polygon(poly)).bounds)
+
+	return idx
 
 
 
-		
+
 

@@ -77,3 +77,41 @@ def stratified_proportional_sampling(attr_cell_distribution, trainpercent, testp
 					print(train_key, test_key, ", Total bins: ", train_key[1] + test_key[1], ", Orig. Hist. value", histogram_values[train_key[0]], ", Total equal elements: ", np.sum(train_cells[train_key] == test_cells[test_key]))
 			
 	return train_cells, test_cells
+
+
+# Generate distribution for variables
+# Pass a SectorMap object and config parameters
+# return arrays (tuple with code, target_variable, independent_variable), numpy array y, numpy array X, sectors with errors. 
+
+def gen_variable_distribution ( sector_object, variable_keys=list(), target_variable_key=None, sort=False, sortidx=2 ):
+	target_var = []
+	error_target_var = []
+
+	for code in sector_object.sector_codes:
+		target_value = 0.0
+		total_variable = 0.0
+		try:
+			if np.isnan(sector_object.grid_sectors[code]['total_variable_list'][target_variable_key]):
+				target_value = 0.0
+			else:
+				target_value = sector_object.grid_sectors[code]['total_variable_list'][target_variable_key]
+			for key in variable_keys:
+				total_variable += sector_object.grid_sectors[code]['total_variable_list'][key]
+			target_var.append((code, total_variable, target_value))
+		except:
+			error_target_var.append(code)
+
+	if sort:
+		target_var = sorted(target_var, key=lambda x: x[sortidx])
+	
+	# Transform into np.matrix
+	varx = []
+	tary = []
+	for c, target, var in target_var:
+		tary.append(target)
+		varx.append(var)
+
+	y = np.transpose(np.array(tary))	
+	X = np.transpose(np.array(varx))
+
+	return target_var, y, X.reshape(-1, 1), error_target_var
