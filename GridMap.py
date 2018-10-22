@@ -54,10 +54,10 @@ def _on_line(lat1, lon1, lat2, lon2, lat_test, lon_test):
 		return False
 
 def _get_perp( x1, y1, x2, y2, x, y):
-	xx = x2 - x1 
+	xx = x2 - x1
 	yy = y2 - y1
-	shortest_length = ((xx * (x - x1)) + (yy * (y - y1))) / ((xx * xx) + (yy * yy)) 
-	x4 = x1 + xx * shortest_length 
+	shortest_length = ((xx * (x - x1)) + (yy * (y - y1))) / ((xx * xx) + (yy * yy))
+	x4 = x1 + xx * shortest_length
 	y4 = y1 + yy * shortest_length
 	if (x4 <= x2) and (x4 >= x1) and (y4 <= y2) and (y4 >= y1):
 		return (x4, y4)
@@ -69,7 +69,7 @@ def _near_line(x2, y2, x1, y1, x3, y3, meters):
 		distance = _haversine(cpoint[0], cpoint[1], float(x3), float(y3))
 		if distance <= meters:
 			return True
-	
+
 	return False
 
 class Window:
@@ -153,19 +153,19 @@ class GridMap:
 						'variable_per_window': {},
 						'label': None,
 						'train_or_test': None}
-				
+
 				self.grid[l][c] = cell
-				
+
 				cell_lowerleftlon += inc_lon
 			cell_lowerleftlat += inc_lat
-			
-		
+
+
 	def read(self):
 		return self.grid
-	
+
 	def read_cell(self, l, c):
 		return self.grid[l][c]
-	
+
 	def find_cell(self, lat, lon):
 		#retorna linha e coluna
 		for l in range(0, self.step):
@@ -249,7 +249,7 @@ class GridMap:
 		return all_min
 
 	def get_variable_by_cell(self, lowercell, uppercell, inTerritory=False):
-		variable_by_cell = list()        
+		variable_by_cell = list()
 		for l in range(lowercell[0], uppercell[0]+1):
 			for c in range(lowercell[1], uppercell[1]+1):
 				if inTerritory == True:
@@ -306,7 +306,7 @@ class GridMap:
 			for l, c in point_list:
 				x, y = basemap(self.grid[l][c]['centroid'][0], self.grid[l][c]['centroid'][1])
 				pt = Point(x, y)
-				
+
 				for shape in defined_shape:
 					poly = Polygon(shape)
 					if pt.within(poly) == True:
@@ -333,7 +333,7 @@ class GridMap:
 			self.grid[l][c]['variable_per_window'][window] += 1
 		else:
 			self.grid[l][c]['variable_per_window'][window] = 1
-		
+
 
 	def set_window(self, windowstruct):
 		self.window = windowstruct
@@ -359,10 +359,10 @@ class GridMap:
 		for cells in variable_with_label:
 			cell = cells[0]
 			self.grid[cell[0]][cell[1]]['label'] = cells[2]
-	
+
 		return variable_with_label
 
-	
+
 	def set_grid_labels(self, labelslist):
 		self.labels = labelslist
 
@@ -373,7 +373,7 @@ class GridMap:
 				if label != "":
 					self.grid[l][c]['label'] = label
 				self.grid[l][c]['train_or_test'] = train_or_test
-					
+
 
 	def _near_line(self, x2, y2, x1, y1, x3, y3, meters):
 		cpoint = _get_perp(float(x1), float(y1), float(x2), float(y2), float(x3), float(y3))
@@ -381,24 +381,8 @@ class GridMap:
 			distance = _haversine(cpoint[0], cpoint[1], float(x3), float(y3))
 			if distance <= meters:
 				return True
-		
+
 		return False
-
-
-	def get_variable_distribuition(self, order='dsc'):
-		distribution = list()
-		for l in range(0, self.step):
-			for c in range(0, self.step):
-				if self.grid[l][c]['in_territory'] == True:
-					distribution.append([(l, c), self.grid[l][c]['total_variable']])
-
-		if order=='asc':
-			reverse = False
-		elif order=='dsc':
-			reverse = True
-
-		return sorted(distribution, key=lambda x: x[1], reverse=reverse)
-
 
 	def save(self, filename = "Model.grid"):
 		try:
@@ -419,27 +403,22 @@ class GridMap:
 			return "Error while loading file."
 
 
-	def get_variable_cell_distribution(self, normalize=False):
+	def get_variable_distribution(self, order='dsc'):
 		distribution = []
-
-		total = 0
 		for l in range(0, self.step):
 			for c in range(0, self.step):
 				if self.grid[l][c]['in_territory'] == True:
-					total+=1
 					attr = self.grid[l][c]['total_variable']
 					distribution.append([attr, (l, c)])
 
-		ord_distribution = sorted(distribution, key = lambda x: float(x[0]))
+		if order=='asc':
+			reverse = False
+		elif order=='dsc':
+			reverse = True
 
-		if normalize == True:
-			max_attr = max([attr[0] for attr in ord_distribution])
-			ord_distribution = [[value[0]/float(max_attr), value[1]] for value in ord_distribution]
+		return sorted(distribution, key = lambda x: float(x[0]), reverse=reverse)
 
-		return ord_distribution
-
-
-#### Plot Methods ####                    
+#### Plot Methods ####
 	def plot_grid(self, basemap, marksize, linewidth):
 		for l in range(0, self.step):
 			for c in range(0, self.step):
@@ -472,7 +451,7 @@ class GridMap:
 		lon_, lat_ = basemap(lon, lat)
 		basemap.plot(lon_, lat_, mark, markersize=size)
 
-		
+
 	def distribute_variable(self, basemap, data, linewidth):
 		self.plot_grid(basemap, 0, linewidth)
 
@@ -486,24 +465,24 @@ class GridMap:
 				total_variable.append(0)
 			else:
 				total_variable.append(self.grid[c[0]][c[1]]['total_variable'])
-		
+
 		for dlat, dlon in zip(data.lat.values, data.lon.values):
 			x, y = basemap(dlon, dlat)
 			xlon.append(x)
 			ylat.append(y)
-		
+
 		numcols, numrows = self.step, self.step
-		
+
 		xi = np.linspace(basemap.llcrnrx, basemap.urcrnrx, numcols)
 		yi = np.linspace(basemap.llcrnry, basemap.urcrnry, numrows)
 		xi, yi = np.meshgrid(xi, yi)
-		
+
 		x, y, z = xlon, ylat, total_variable
 		zi = griddata(x, y, z, xi, yi, interp='linear')
 		m = basemap.contourf(xi, yi, zi, vmin=1, vmax=self.get_max_variable()['total_variable'], alpha=0.5)
 		cb = basemap.colorbar(m, location='bottom', pad="5%")
-		
-		
+
+
 	def hot_spot(self, basemap, linewidth, colorbar=False):
 		self.plot_grid(basemap, 0, linewidth)
 
@@ -522,7 +501,7 @@ class GridMap:
 						left_lon2, right_lon2 = basemap([self.grid[l][c]['leftlon'], self.grid[l][c]['rightlon']], [self.grid[l][c]['upperlat'], self.grid[l][c]['upperlat']])
 						low_lat1, up_lat1 = basemap([self.grid[l][c]['rightlon'], self.grid[l][c]['rightlon']], [self.grid[l][c]['lowerlat'], self.grid[l][c]['upperlat']])
 						low_lat2, up_lat2 = basemap([self.grid[l][c]['leftlon'], self.grid[l][c]['leftlon']], [self.grid[l][c]['upperlat'], self.grid[l][c]['lowerlat']])
-						
+
 						data = pd.DataFrame([(left_lon1[0], right_lon1[0], self.grid[l][c]['total_variable']),
 											(low_lat1[1], up_lat1[1], self.grid[l][c]['total_variable']),
 											(low_lat2[0], up_lat2[0], self.grid[l][c]['total_variable']),
@@ -531,7 +510,7 @@ class GridMap:
 						xi = np.linspace(data.X.min(), data.X.max(), numcols)
 						yi = np.linspace(data.Y.min(), data.Y.max(), numrows)
 						xi, yi = np.meshgrid(xi, yi)
-						
+
 						x, y, z = data.X.values, data.Y.values, data.Z.values
 						zi = griddata(x, y, z, xi, yi, interp='linear')
 						cs = basemap.contourf(xi, yi, zi, vmin=1, vmax=self.get_max_variable()['total_variable'], cmap = plt.cm.jet, alpha=0.5)
@@ -595,7 +574,7 @@ class GridMap:
 	def street_points(self, basemap, corner_list, interpol_list, cmark='g', imark='b'):
 		#corner_list, interpol_list = lat, lon
 		self.plot_grid(basemap, 0, 1.0)
-		
+
 		corner_lats = []
 		corner_lons = []
 		interpol_lats = []
@@ -610,15 +589,15 @@ class GridMap:
 			lon, lat = basemap(latlon[1], latlon[0])
 			interpol_lons.append(lon)
 			interpol_lats.append(lat)
-			
+
 		basemap.scatter(corner_lons, corner_lats, marker='D',color='m')
 		basemap.scatter(interpol_lons, interpol_lats, marker='o',color='b')
 
 	def image_points(self, basemap, filenameListFromDir, color='m'):
 		self.plot_grid(basemap, 0, 0.6)
 		lons = []
-		lats = [] 
-		
+		lats = []
+
 		fr = open(filenameListFromDir, 'r')
 		pointListFromDir = fr.readlines()
 		for point in pointListFromDir:
@@ -633,7 +612,7 @@ class GridMap:
 	def event_points(self, basemap, pointlist, marker='D', color='m'):
 		self.plot_grid(basemap, 0, 1.0)
 		lons = []
-		lats = [] 
+		lats = []
 		for latlon in pointlist:
 			lon, lat = basemap(latlon[1], latlon[0])
 			lons.append(lon)
@@ -694,7 +673,7 @@ class GridMap:
 					current_lon = finalshape[key][i][1]
 					next_lat = finalshape[key][i+1][0]
 					next_lon = finalshape[key][i+1][1]
-					
+
 					interpos = []
 					# check if the distance between the 2 points is more than 100 meters
 					meters = _haversine(current_lat, current_lon, next_lat, next_lon)
@@ -743,7 +722,7 @@ class GridMap:
 				elif in_territory==False:
 					corner_list.append(point)
 					fw.write(str(point) + '\n')
-		
+
 		for line in interpolated[0].keys():
 			for sect in interpolated[0][line]:
 				for point in sect:
@@ -762,7 +741,7 @@ class GridMap:
 
 	# Generate a pointlist from a dir containing lat_lon_camera images
 	def gen_pointlist_from_dir(self, path, tot='all', filename="pointListFromDir.list", metacheck=True):
-		
+
 		if metacheck == False:
 			imagepath = path
 			metapath = ""
@@ -772,7 +751,7 @@ class GridMap:
 
 		print(imagepath)
 		file_list = sorted(os.listdir(imagepath))
-		
+
 		fw = open(filename, 'w')
 		fw1 = open('removed_' + filename + '.log', 'w')
 		fw2 = open('damaged_' + filename + '.log', 'w')
@@ -790,16 +769,16 @@ class GridMap:
 				lon = slices[1]
 			else:
 				sys.exit("Wrong file name format: accept only [line_lat_lon_cam] or [lat_lon_cam]")
-			
+
 			latlons.append((line, lat, lon))
-			
+
 		latlons = list(set(latlons))
 
 		if tot != 'all':
 			lim = tot
 		else:
 			lim = len(latlons)
-		
+
 		for point in latlons[:lim]:
 			allcamera = list()
 			status = list()
@@ -830,19 +809,19 @@ class GridMap:
 					except:
 						fw1.write("Not found: " + str(metapath) + '/' + str(point[1]) + '_' + str(point[2]) + '_' + c + '.txt\n')
 						pass
-				
+
 			if len(status) == 0 and len(allcamera) == 0:
 				fw.write(point[1] + ',' + point[2] + '\n')
 			else:
 				fw1.write("Status Not OK," + str(status) +  ',' + str(metapath) + '/' + str(point[1]) + '_' + str(point[2]) + '\n')
-	  
+
 		fw.close()
 		fw1.close()
 		fw2.close()
 
 
 	#Read a point list in tuple format (lat, lon) and generate a pointlist
-	def read_point_list(self, filename):    
+	def read_point_list(self, filename):
 		pointlist = []
 		fw = open(filename, 'r')
 		lines = fw.readlines()
@@ -857,7 +836,7 @@ class GridMap:
 
 
 
-	   
+
 
 
 

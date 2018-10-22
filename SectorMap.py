@@ -1,7 +1,7 @@
 # coding: utf-8
 
 import numpy as np
-from rtree import index as Indx
+#from rtree import index as Indx
 
 from shapely.geometry import Polygon
 from shapely.geometry import Point as Pt
@@ -247,13 +247,13 @@ class SectorMap:
 				total_variable += float(self.grid_sectors[code_sector][variable])
 
 			self.grid_sectors[code_sector]['total_variable_list'][total_variable_name] = total_variable
-		
-
-			
-				
 
 
-				
+
+
+
+
+
 
 
 

@@ -4,7 +4,7 @@ import math
 from mpl_toolkits.basemap import Basemap
 import ast
 
-from rtree import index as Indx
+#from rtree import index as Indx
 from shapely.geometry import shape as GeoShape
 from shapely.geometry import Polygon
 from shapely.geometry import Point as Pt
