@@ -185,17 +185,16 @@ def gen_traintest_lists( gridmap, points_dataframe, lintransform="minmax", borde
 		train_or_test = gridmap.grid[cell[0]][cell[1]]['train_or_test']
 
 		if lintransform == "minmax":
-			attr_value = ( gridmap.grid[cell[0]][cell[1]]['total_variable'] - float(parameters[0]) ) / ( float(parameters[1]) - float(parameters[0]) )
+			attr_value = ( float(gridmap.grid[cell[0]][cell[1]]['total_variable']) - float(parameters[0]) ) / ( float(parameters[1]) - float(parameters[0]) )
 		elif lintransform == "centered":
-			attr_value = gridmap.grid[cell[0]][cell[1]]['total_variable'] - float(parameters[0])
+			attr_value = float(gridmap.grid[cell[0]][cell[1]]['total_variable']) - float(parameters[0])
 		elif lintransform == "zscore":
-			attr_value = ( gridmap.grid[cell[0]][cell[1]]['total_variable'] - float(parameters[0]) ) / float(parameters[1])
+			attr_value = ( float(gridmap.grid[cell[0]][cell[1]]['total_variable']) - float(parameters[0]) ) / float(parameters[1])
 
 		else:
-			attr_value = gridmap.grid[cell[0]][cell[1]]['total_variable']
+			attr_value = float(gridmap.grid[cell[0]][cell[1]]['total_variable'])
 
-		#print(cell, gridmap.grid[cell[0]][cell[1]]['train_or_test'])
-		fw_distribution.write(row.id + ";" + row.lat + ";" + row.lon + ";" + str(cell) + ";" + str(train_or_test) + "\n")
+		fw_distribution.write(row.id + ";" + str(cell[0])+"-"+str(cell[1]) + ";" + row.lat + ";" + row.lon + ";" + str(attr_value) + ";" + str(train_or_test) + "\n")
 		if train_or_test == 'train':
 			# Test if point is above borderlines
 			border1_online = gridmap._near_line( gridmap.grid[cell[0]][cell[1]]['leftlon'], gridmap.grid[cell[0]][cell[1]]['upperlat'], gridmap.grid[cell[0]][cell[1]]['leftlon'], gridmap.grid[cell[0]][cell[1]]['lowerlat'], float(row.lon), float(row.lat), border_distance)
