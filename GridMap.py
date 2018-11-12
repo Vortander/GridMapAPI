@@ -404,6 +404,7 @@ class GridMap:
 
 
 	def get_variable_distribution(self, order='dsc'):
+		#traintest = True include only train and test cells
 		distribution = []
 		for l in range(0, self.step):
 			for c in range(0, self.step):

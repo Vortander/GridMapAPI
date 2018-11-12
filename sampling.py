@@ -156,7 +156,8 @@ def linear_transformation(cell_distribution, mode="minmax"):
 		parameters = (mean_attr, '')
 
 	else:
-		ord_distribution, parameters = False
+		ord_distribution = [[value[0], value[1]] for value in cell_distribution]
+		parameters = None
 
 	return ord_distribution, parameters
 
@@ -173,6 +174,8 @@ def gen_traintest_lists( gridmap, points_dataframe, lintransform="minmax", borde
 	cell_distribution = gridmap.get_variable_distribution(order='asc')
 	_dist, parameters = linear_transformation(cell_distribution, mode=lintransform)
 
+	print(parameters)
+
 	fw_distribution = open(os.path.join(path, filename + ".csv"), 'w')
 	fw_train = open(os.path.join(path, filename + "_train.csv"), 'w')
 	fw_test = open(os.path.join(path, filename + "_test.csv"), 'w')
@@ -183,6 +186,7 @@ def gen_traintest_lists( gridmap, points_dataframe, lintransform="minmax", borde
 		count+=1
 		cell = gridmap.find_cell(float(row.lat), float(row.lon))
 		train_or_test = gridmap.grid[cell[0]][cell[1]]['train_or_test']
+		original_value = float(gridmap.grid[cell[0]][cell[1]]['total_variable'])
 
 		if lintransform == "minmax":
 			attr_value = ( float(gridmap.grid[cell[0]][cell[1]]['total_variable']) - float(parameters[0]) ) / ( float(parameters[1]) - float(parameters[0]) )
@@ -194,7 +198,7 @@ def gen_traintest_lists( gridmap, points_dataframe, lintransform="minmax", borde
 		else:
 			attr_value = float(gridmap.grid[cell[0]][cell[1]]['total_variable'])
 
-		fw_distribution.write(row.id + ";" + str(cell[0])+"-"+str(cell[1]) + ";" + row.lat + ";" + row.lon + ";" + str(attr_value) + ";" + str(train_or_test) + "\n")
+		fw_distribution.write(row.id + ";" + str(cell[0])+"-"+str(cell[1]) + ";" + row.lat + ";" + row.lon + ";" + str(attr_value) + ";" + str(train_or_test) + ";" + str(original_value) + "\n")
 		if train_or_test == 'train':
 			# Test if point is above borderlines
 			border1_online = gridmap._near_line( gridmap.grid[cell[0]][cell[1]]['leftlon'], gridmap.grid[cell[0]][cell[1]]['upperlat'], gridmap.grid[cell[0]][cell[1]]['leftlon'], gridmap.grid[cell[0]][cell[1]]['lowerlat'], float(row.lon), float(row.lat), border_distance)
