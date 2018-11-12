@@ -230,8 +230,13 @@ class SectorMap:
 				if use_rtree : break
 
 	# Add variable value with label to total_variable_list, providing a code_sector.
-	def set_variable_value_to_list( self, code_sector, variable_value=None, variable_name='attribute' ):
-		self.grid_sectors[code_sector]['total_variable_list'][variable_name] = variable_value
+	def set_variable_value_to_list( self, code_sector, variable_value=1, variable_name='attribute' ):
+		if variable_name not in self.grid_sectors[code_sector]['total_variable_list'].keys():
+			self.grid_sectors[code_sector]['total_variable_list'][variable_name] = variable_value
+		else:
+			localtotal = self.grid_sectors[code_sector]['total_variable_list'][variable_name]
+			self.grid_sectors[code_sector]['total_variable_list'][variable_name] = localtotal + variable_value
+
 
 	# TODO: Check if still needed
 	def set_total_variable_name( self, total_variable_name='total_attribute', variable_name_list=None ):
