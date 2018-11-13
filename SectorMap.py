@@ -1,7 +1,7 @@
 # coding: utf-8
 
 import numpy as np
-#from rtree import index as Indx
+from rtree import index as Indx
 
 from shapely.geometry import Polygon
 from shapely.geometry import Point as Pt
@@ -91,7 +91,8 @@ class PointMap:
 				}
 
 class SectorMap:
-	def __init__(self, basemap, shapeinfo, shapearray, code_sector_key, sector_name_key=None):
+	def __init__(self, basemap, shapeinfo, shapearray, code_sector_key, sector_name_key=None, name='SectorMap'):
+		self.name = name
 		self.basemap = basemap
 		self.shape_info = shapeinfo
 		self.shape_array = shapearray

@@ -83,6 +83,16 @@ def stratified_proportional_sampling(attr_cell_distribution, trainpercent, testp
 
 	return train_cells, test_cells
 
+# Generate distribution for variables (for various sector_objects)
+
+def gen_attr_cell_distribution ( sector_objects, variable_keys=list(), sort=False ):
+	pass
+
+
+
+
+
+
 
 # Generate distribution for variables
 # Pass a SectorMap object and config parameters
