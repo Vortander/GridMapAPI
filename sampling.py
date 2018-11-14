@@ -5,7 +5,12 @@ import os
 
 def stratified_proportional_sampling(attr_cell_distribution, trainpercent, testpercent, bins=10, debug=True):
 	attr_distribution = sorted([value[0] for value in attr_cell_distribution])
+	print(attr_distribution)
+
 	histogram_values, bin_edges = np.histogram(attr_distribution, bins=bins)
+
+	print(histogram_values)
+	print(bin_edges)
 
 	total_cells = float(len(attr_cell_distribution))
 	total_train = (trainpercent * total_cells)/100.0
@@ -85,14 +90,23 @@ def stratified_proportional_sampling(attr_cell_distribution, trainpercent, testp
 
 # Generate distribution for variables (for various sector_objects)
 
-def gen_attr_cell_distribution ( sector_objects, variable_keys=list(), sort=False ):
-	pass
+def gen_attr_cell_distribution ( sector_objects=list(), variable_keys=list(), sort=False ):
+	# If variable_keys indicates more than one key, returns the sum of the values
+	# return tuple array (total_variable, code, variable_key, name)
+	attr_cell_distribution = []
+	for sector_object in sector_objects:
+		name = sector_object.name
+		for code in sector_object.sector_codes:
+			total_variable = 0
+			for key in variable_keys:
+				if key in sector_object.grid_sectors[code]['total_variable_list'].keys():
+					total_variable += sector_object.grid_sectors[code]['total_variable_list'][key]
 
+			attr_cell_distribution.append((total_variable, code, variable_keys, name))
+	if sort == True:
+		attr_cell_distribution = sorted(attr_cell_distribution, key=lambda x: x[0])
 
-
-
-
-
+	return attr_cell_distribution
 
 # Generate distribution for variables
 # Pass a SectorMap object and config parameters
