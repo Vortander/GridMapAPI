@@ -3,6 +3,9 @@ import numpy as np
 import random
 import os
 
+#Temporary
+from shapely.geometry import Point as Pt
+
 def stratified_proportional_sampling(attr_cell_distribution, trainpercent, testpercent, bins=10, debug=True):
 	attr_distribution = sorted([value[0] for value in attr_cell_distribution])
 	print(attr_distribution)
@@ -184,6 +187,110 @@ def linear_transformation(cell_distribution, mode="minmax"):
 		parameters = None
 
 	return ord_distribution, parameters
+
+import math
+
+def _haversine(lat1, lon1, lat2, lon2):
+	R = 6378.137
+	dLat = lat2 * math.pi / 180 - lat1 * math.pi / 180
+	dLon = lon2 * math.pi / 180 - lon1 * math.pi / 180
+	a = math.sin(dLat/2) * math.sin(dLat/2) + math.cos(lat1 * math.pi / 180) * math.cos(lat2 * math.pi / 180) * math.sin(dLon/2) * math.sin(dLon/2)
+	c = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
+	d = R * c
+	d * 1000
+
+	return d
+
+def _get_perp( x1, y1, x2, y2, x, y):
+	xx = x2 - x1
+	yy = y2 - y1
+	shortest_length = ((xx * (x - x1)) + (yy * (y - y1))) / ((xx * xx) + (yy * yy))
+	x4 = x1 + xx * shortest_length
+	y4 = y1 + yy * shortest_length
+	if (x4 <= x2) and (x4 >= x1) and (y4 <= y2) and (y4 >= y1):
+		return (x4, y4)
+	return None
+
+def _near_line(x2, y2, x1, y1, x3, y3, meters):
+	cpoint = _get_perp(float(x1), float(y1), float(x2), float(y2), float(x3), float(y3))
+	if cpoint != None:
+		distance = _haversine(cpoint[0], cpoint[1], float(x3), float(y3))
+		if distance <= meters:
+			return True
+
+	return False
+
+def _near_point(x2, y2, x1, y1, meters):
+	distance = _haversine(float(x2), float(y2), float(x1), float(y1))
+	if distance <= meters:
+		return True
+	else:
+		return False
+
+
+def gen_traintest_lists_sectormap( cities_objects = {}, border_distance=0.150, filename="PointDistribution", path="" ):
+	#cities_objects = SectorMap datastructs and points_dataframe = Pandas dataframe with points, accessed by key: 'RJ': [gridsector, points_dataframe, variable_keys]
+	#border_distance = Distance to consider with points near cell or polygon border.
+	#filename = Filename prefix
+	#path = Dir path to save distribution lists
+
+	#attr_distribution = gen_attr_cell_distribution( sector_objects=sector_objects, variable_keys=variable_keys, sort=True )
+	fw_distribution = open(os.path.join(path, filename + ".csv"), 'w')
+	fw_train = open(os.path.join(path, filename + "_train.csv"), 'w')
+	fw_test = open(os.path.join(path, filename + "_test.csv"), 'w')
+
+	for city in cities_objects.keys():
+		gridsector = cities_objects[city][0]
+		points_dataframe = cities_objects[city][1]
+		variable_keys = cities_objects[city][2]
+
+		count = 0
+		for row in points_dataframe.itertuples():
+			count+=1
+			#Find what sector the point belongs - Use external function
+			x, y = gridsector.basemap( float(row.lon), float(row.lat) )
+			point = Pt(x, y)
+			sector_code = None
+			for code in gridsector.sector_codes:
+				if point.within(gridsector.grid_sectors[code]['sector_polygon']):
+					sector_code = code
+					break
+			#
+
+			if sector_code != None:
+				train_or_test = gridsector.grid_sectors[sector_code]['train_or_test']
+
+				#Find total_variable value - Use external function
+				total_variable = 0
+				for key in variable_keys:
+					if key in gridsector.grid_sectors[sector_code]['total_variable_list'].keys():
+						total_variable += gridsector.grid_sectors[sector_code]['total_variable_list'][key]
+				#
+				attr_value = float(total_variable)
+				fw_distribution.write(row.id + ";" + str(city)+"-"+str(sector_code) + ";" + row.lat + ";" + row.lon + ";" + str(attr_value) + ";" + str(train_or_test) + ";" + str(variable_keys) + "\n")
+
+				#Check if point is near polygon lines.
+				lons = [ lon for lon in gridsector.grid_sectors[sector_code]['sector_shape_lon'] ]
+				lats = [ lat for lat in gridsector.grid_sectors[sector_code]['sector_shape_lat'] ]
+				bordercheck = []
+
+				for lonpol, latpol in zip(lons, lats):
+					for lop, lap in zip(lonpol, latpol):
+						bordercheck.append( _near_point( float(lop), float(lap), float(row.lon), float(row.lat), border_distance ) )
+
+				if train_or_test == 'train':
+					if True not in bordercheck:
+						fw_train.write(row.id + ";" + str(city)+"-"+str(sector_code) + ";" + row.lat + ";" + row.lon + ";" + str(attr_value) + "\n")
+
+				if train_or_test == 'test':
+					if True not in bordercheck:
+						fw_test.write(row.id + ";" + str(city)+"-"+str(sector_code) + ";" + row.lat + ";" + row.lon + ";" + str(attr_value) + "\n")
+
+
+	fw_distribution.close()
+	fw_train.close()
+	fw_test.close()
+
 
 def gen_traintest_lists( gridmap, points_dataframe, lintransform="minmax", border_distance=0.150, filename="PointDistribution", path="" ):
 	#gridmap = GridMap or SectorMap datastruct

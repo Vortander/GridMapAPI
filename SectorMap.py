@@ -1,13 +1,15 @@
 # coding: utf-8
 
+import os, sys
 import numpy as np
-from rtree import index as Indx
+
+if 'rtree' in sys.modules:
+	from rtree import index as Indx
 
 from shapely.geometry import Polygon
 from shapely.geometry import Point as Pt
 from shapely.geometry import shape as ShapeGeo
 
-import os, sys
 from shutil import copy2
 from random import randint
 from scipy.misc import imread
@@ -163,6 +165,14 @@ class SectorMap:
 
 	def sector_size(self, code, objct):
 		return len(self.grid_sectors[int(code)][str(objct)])
+
+	def find_sector( self, lon, lat ):
+		point = Point( self.basemap, lon, lat )
+		for code in self.sector_codes:
+			if point.within(self.grid_sectors[code]['sector_polygon']):
+				return code
+
+		return None
 
 	#TODO: This Method is possibly deprecated...check if is still needed.
 	def check_point(self, code_sector, point):
