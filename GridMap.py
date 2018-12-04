@@ -243,7 +243,8 @@ class GridMap:
 		minim = maxim
 		for l in range(0, self.step):
 			for c in range(0, self.step):
-				if (self.grid[l][c]['total_variable'] < minim) and (self.grid[l][c]['total_variable'] > 0):
+				#if (self.grid[l][c]['total_variable'] < minim) and (self.grid[l][c]['total_variable'] >= 0):
+				if (self.grid[l][c]['total_variable'] < minim):
 					minim = self.grid[l][c]['total_variable']
 					all_min = self.grid[l][c]
 		return all_min
@@ -484,7 +485,7 @@ class GridMap:
 		cb = basemap.colorbar(m, location='bottom', pad="5%")
 
 
-	def hot_spot(self, basemap, linewidth, colorbar=False):
+	def hot_spot(self, basemap, linewidth, colorbar=False, labelsize=25):
 		self.plot_grid(basemap, 0, linewidth)
 
 		distribution = []
@@ -492,7 +493,7 @@ class GridMap:
 
 		for l in range(0, self.step):
 			for c in range(0, self.step):
-				if self.grid[l][c]['total_variable'] > 0:
+				if self.grid[l][c]['total_variable'] >= 0:
 					if self.grid[l][c]['in_territory'] == True:
 						total+=1
 						attr = self.grid[l][c]['total_variable']
@@ -514,16 +515,27 @@ class GridMap:
 
 						x, y, z = data.X.values, data.Y.values, data.Z.values
 						zi = griddata(x, y, z, xi, yi, interp='linear')
-						cs = basemap.contourf(xi, yi, zi, vmin=1, vmax=self.get_max_variable()['total_variable'], cmap = plt.cm.jet, alpha=0.5)
+						cs = basemap.contourf(xi, yi, zi, vmin=self.get_min_variable()['total_variable'], vmax=self.get_max_variable()['total_variable'], cmap = plt.cm.jet, alpha=0.5)
 
 		if colorbar == True:
 			ord_distribution = np.sort(distribution)
 			cmap = plt.cm.jet
-			norm = mpl.colors.Normalize(vmin=1, vmax=ord_distribution[total-1])
+			norm = mpl.colors.Normalize(vmin=self.get_min_variable()['total_variable'], vmax=ord_distribution[total-1])
 			sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
 			sm.set_array([])
 			cbar = basemap.colorbar(sm)
-			cbar.ax.tick_params(labelsize=25)
+
+			m0=int(self.get_min_variable()['total_variable'])
+			m4=int(self.get_max_variable()['total_variable'])
+			m1=int(1*(m4-m0)/4.0 + m0)
+			m2=int(2*(m4-m0)/4.0 + m0)
+			m3=int(3*(m4-m0)/4.0 + m0)
+			print(m0, m1, m2, m3, m4)
+			cbar.set_ticks([m0,m1,m2,m3,m4])
+			cbar.set_ticklabels([m0,m1,m2,m3,m4])
+
+			cbar.ax.tick_params(labelsize=labelsize)
+
 
 	def plot_variable_points(self, basemap, submap=False, lower_left_cell=None, upper_right_cell=None, name=None, color='g', mark='b'):
 		lons = []
