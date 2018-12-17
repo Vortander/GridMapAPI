@@ -292,7 +292,7 @@ def gen_traintest_lists_sectormap( cities_objects = {}, border_distance=0.150, f
 	fw_test.close()
 
 
-def gen_traintest_lists( gridmap, points_dataframe, lintransform="minmax", border_distance=0.150, filename="PointDistribution", path="" ):
+def gen_traintest_lists( gridmap, points_dataframe, lintransform="minmax", border_distance=0.150, filename="PointDistribution", path="", only_test=True ):
 	#gridmap = GridMap or SectorMap datastruct
 	#points_dataframe = Pandas dataframe with points
 	#linetransform = "minmax", "centered", "zorder"
@@ -331,12 +331,15 @@ def gen_traintest_lists( gridmap, points_dataframe, lintransform="minmax", borde
 
 		fw_distribution.write(row.id + ";" + str(cell[0])+"-"+str(cell[1]) + ";" + row.lat + ";" + row.lon + ";" + str(attr_value) + ";" + str(train_or_test) + ";" + str(original_value) + "\n")
 		if train_or_test == 'train':
-			# Test if point is above borderlines
-			border1_online = gridmap._near_line( gridmap.grid[cell[0]][cell[1]]['leftlon'], gridmap.grid[cell[0]][cell[1]]['upperlat'], gridmap.grid[cell[0]][cell[1]]['leftlon'], gridmap.grid[cell[0]][cell[1]]['lowerlat'], float(row.lon), float(row.lat), border_distance)
-			border2_online = gridmap._near_line( gridmap.grid[cell[0]][cell[1]]['rightlon'], gridmap.grid[cell[0]][cell[1]]['upperlat'], gridmap.grid[cell[0]][cell[1]]['rightlon'], gridmap.grid[cell[0]][cell[1]]['lowerlat'], float(row.lon), float(row.lat), border_distance)
-			border3_online = gridmap._near_line( gridmap.grid[cell[0]][cell[1]]['rightlon'], gridmap.grid[cell[0]][cell[1]]['lowerlat'], gridmap.grid[cell[0]][cell[1]]['leftlon'], gridmap.grid[cell[0]][cell[1]]['lowerlat'], float(row.lon), float(row.lat), border_distance)
-			border4_online = gridmap._near_line( gridmap.grid[cell[0]][cell[1]]['rightlon'], gridmap.grid[cell[0]][cell[1]]['upperlat'], gridmap.grid[cell[0]][cell[1]]['leftlon'], gridmap.grid[cell[0]][cell[1]]['upperlat'], float(row.lon), float(row.lat), border_distance)
-			if (border1_online or border2_online or border3_online or border4_online) == False:
+			if only_test != True:
+				# Test if point is above borderlines
+				border1_online = gridmap._near_line( gridmap.grid[cell[0]][cell[1]]['leftlon'], gridmap.grid[cell[0]][cell[1]]['upperlat'], gridmap.grid[cell[0]][cell[1]]['leftlon'], gridmap.grid[cell[0]][cell[1]]['lowerlat'], float(row.lon), float(row.lat), border_distance)
+				border2_online = gridmap._near_line( gridmap.grid[cell[0]][cell[1]]['rightlon'], gridmap.grid[cell[0]][cell[1]]['upperlat'], gridmap.grid[cell[0]][cell[1]]['rightlon'], gridmap.grid[cell[0]][cell[1]]['lowerlat'], float(row.lon), float(row.lat), border_distance)
+				border3_online = gridmap._near_line( gridmap.grid[cell[0]][cell[1]]['rightlon'], gridmap.grid[cell[0]][cell[1]]['lowerlat'], gridmap.grid[cell[0]][cell[1]]['leftlon'], gridmap.grid[cell[0]][cell[1]]['lowerlat'], float(row.lon), float(row.lat), border_distance)
+				border4_online = gridmap._near_line( gridmap.grid[cell[0]][cell[1]]['rightlon'], gridmap.grid[cell[0]][cell[1]]['upperlat'], gridmap.grid[cell[0]][cell[1]]['leftlon'], gridmap.grid[cell[0]][cell[1]]['upperlat'], float(row.lon), float(row.lat), border_distance)
+				if (border1_online or border2_online or border3_online or border4_online) == False:
+					fw_train.write(row.id + ";" + str(cell[0])+"-"+str(cell[1]) + ";" + row.lat + ";" + row.lon + ";" + str(attr_value) + "\n")
+			elif only_test == True:
 				fw_train.write(row.id + ";" + str(cell[0])+"-"+str(cell[1]) + ";" + row.lat + ";" + row.lon + ";" + str(attr_value) + "\n")
 
 		elif train_or_test == 'test':
