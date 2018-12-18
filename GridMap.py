@@ -411,7 +411,8 @@ class GridMap:
 			for c in range(0, self.step):
 				if self.grid[l][c]['in_territory'] == True:
 					attr = self.grid[l][c]['total_variable']
-					distribution.append([attr, (l, c)])
+					label = self.grid[l][c]['train_or_test']
+					distribution.append([attr, (l, c), label])
 
 		if order=='asc':
 			reverse = False
