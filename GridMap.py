@@ -228,6 +228,8 @@ class GridMap:
 			self.grid[l][c]['street_points'].append(StreetPoint)
 			self.grid[l][c]['total_street_points'] += 1
 
+	def set_variable_by_cell(self, l, c, variable_value=None):
+		self.grid[l][c]['total_variable'] = variable_value
 
 	def get_max_variable(self):
 		maxim = 0
@@ -486,7 +488,7 @@ class GridMap:
 		cb = basemap.colorbar(m, location='bottom', pad="5%")
 
 
-	def hot_spot(self, basemap, linewidth, colorbar=False, labelsize=25):
+	def hot_spot(self, basemap, linewidth, colorbar=False, labelsize=25, cell_list=None, force_max_min=(None, None), alpha=0.5):
 		self.plot_grid(basemap, 0, linewidth)
 
 		distribution = []
@@ -496,38 +498,50 @@ class GridMap:
 			for c in range(0, self.step):
 				if self.grid[l][c]['total_variable'] >= 0:
 					if self.grid[l][c]['in_territory'] == True:
-						total+=1
-						attr = self.grid[l][c]['total_variable']
-						distribution.append(attr)
+						if cell_list != None and (l, c) in cell_list:
+							total+=1
+							attr = self.grid[l][c]['total_variable']
+							distribution.append(attr)
 
-						left_lon1, right_lon1 = basemap([self.grid[l][c]['leftlon'], self.grid[l][c]['rightlon']], [self.grid[l][c]['lowerlat'], self.grid[l][c]['lowerlat']])
-						left_lon2, right_lon2 = basemap([self.grid[l][c]['leftlon'], self.grid[l][c]['rightlon']], [self.grid[l][c]['upperlat'], self.grid[l][c]['upperlat']])
-						low_lat1, up_lat1 = basemap([self.grid[l][c]['rightlon'], self.grid[l][c]['rightlon']], [self.grid[l][c]['lowerlat'], self.grid[l][c]['upperlat']])
-						low_lat2, up_lat2 = basemap([self.grid[l][c]['leftlon'], self.grid[l][c]['leftlon']], [self.grid[l][c]['upperlat'], self.grid[l][c]['lowerlat']])
+							left_lon1, right_lon1 = basemap([self.grid[l][c]['leftlon'], self.grid[l][c]['rightlon']], [self.grid[l][c]['lowerlat'], self.grid[l][c]['lowerlat']])
+							left_lon2, right_lon2 = basemap([self.grid[l][c]['leftlon'], self.grid[l][c]['rightlon']], [self.grid[l][c]['upperlat'], self.grid[l][c]['upperlat']])
+							low_lat1, up_lat1 = basemap([self.grid[l][c]['rightlon'], self.grid[l][c]['rightlon']], [self.grid[l][c]['lowerlat'], self.grid[l][c]['upperlat']])
+							low_lat2, up_lat2 = basemap([self.grid[l][c]['leftlon'], self.grid[l][c]['leftlon']], [self.grid[l][c]['upperlat'], self.grid[l][c]['lowerlat']])
 
-						data = pd.DataFrame([(left_lon1[0], right_lon1[0], self.grid[l][c]['total_variable']),
-											(low_lat1[1], up_lat1[1], self.grid[l][c]['total_variable']),
-											(low_lat2[0], up_lat2[0], self.grid[l][c]['total_variable']),
-											(low_lat1[0], up_lat1[0], self.grid[l][c]['total_variable'])], columns=list('XYZ'))
-						numcols, numrows = self.step + 2, self.step + 2
-						xi = np.linspace(data.X.min(), data.X.max(), numcols)
-						yi = np.linspace(data.Y.min(), data.Y.max(), numrows)
-						xi, yi = np.meshgrid(xi, yi)
+							data = pd.DataFrame([(left_lon1[0], right_lon1[0], self.grid[l][c]['total_variable']),
+												(low_lat1[1], up_lat1[1], self.grid[l][c]['total_variable']),
+												(low_lat2[0], up_lat2[0], self.grid[l][c]['total_variable']),
+												(low_lat1[0], up_lat1[0], self.grid[l][c]['total_variable'])], columns=list('XYZ'))
+							numcols, numrows = self.step + 2, self.step + 2
+							xi = np.linspace(data.X.min(), data.X.max(), numcols)
+							yi = np.linspace(data.Y.min(), data.Y.max(), numrows)
+							xi, yi = np.meshgrid(xi, yi)
 
-						x, y, z = data.X.values, data.Y.values, data.Z.values
-						zi = griddata(x, y, z, xi, yi, interp='linear')
-						cs = basemap.contourf(xi, yi, zi, vmin=self.get_min_variable()['total_variable'], vmax=self.get_max_variable()['total_variable'], cmap = plt.cm.jet, alpha=0.5)
+							x, y, z = data.X.values, data.Y.values, data.Z.values
+							zi = griddata(x, y, z, xi, yi, interp='linear')
+							if force_max_min == (None, None):
+								cs = basemap.contourf(xi, yi, zi, vmin=self.get_min_variable()['total_variable'], vmax=self.get_max_variable()['total_variable'], cmap = plt.cm.jet, alpha=alpha)
+							else:
+								cs = basemap.contourf(xi, yi, zi, vmin=force_max_min[0], vmax=force_max_min[1], cmap = plt.cm.jet, alpha=alpha)
 
 		if colorbar == True:
 			ord_distribution = np.sort(distribution)
 			cmap = plt.cm.jet
-			norm = mpl.colors.Normalize(vmin=self.get_min_variable()['total_variable'], vmax=ord_distribution[total-1])
+			if force_max_min == (None, None):
+				norm = mpl.colors.Normalize(vmin=self.get_min_variable()['total_variable'], vmax=ord_distribution[total-1])
+			else:
+				norm = mpl.colors.Normalize(vmin=force_max_min[0], vmax=force_max_min[1])
 			sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
 			sm.set_array([])
 			cbar = basemap.colorbar(sm)
 
-			m0=int(self.get_min_variable()['total_variable'])
-			m4=int(self.get_max_variable()['total_variable'])
+			if force_max_min == (None, None):
+				m0=int(self.get_min_variable()['total_variable'])
+				m4=int(self.get_max_variable()['total_variable'])
+			else:
+				m0=int(force_max_min[0])
+				m4=int(force_max_min[1])
+
 			m1=int(1*(m4-m0)/4.0 + m0)
 			m2=int(2*(m4-m0)/4.0 + m0)
 			m3=int(3*(m4-m0)/4.0 + m0)
