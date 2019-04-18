@@ -273,7 +273,7 @@ class GridMap:
 		return all_max
 
 	def get_mintotal_streetpoints(self):
-		maxim = self.get_maxtotal_streetpoints()['total_stret_points']
+		maxim = self.get_maxtotal_streetpoints()['total_street_points']
 		minim = maxim
 		for l in range(0, self.step):
 			for c in range(0, self.step):
@@ -406,7 +406,7 @@ class GridMap:
 			return "Error while loading file."
 
 
-	def get_variable_distribution(self, order='dsc'):
+	def get_variable_distribution(self, order='dsc', streetpoints=False):
 		#traintest = True include only train and test cells
 		distribution = []
 		for l in range(0, self.step):
@@ -414,7 +414,11 @@ class GridMap:
 				if self.grid[l][c]['in_territory'] == True:
 					attr = self.grid[l][c]['total_variable']
 					label = self.grid[l][c]['train_or_test']
-					distribution.append([attr, (l, c), label])
+					street = self.grid[l][c]['total_street_points']
+					if streetpoints == False:
+						distribution.append([attr, (l, c), label])
+					else:
+						distribution.append([attr, (l, c), label, street])
 
 		if order=='asc':
 			reverse = False
@@ -422,6 +426,7 @@ class GridMap:
 			reverse = True
 
 		return sorted(distribution, key = lambda x: float(x[0]), reverse=reverse)
+
 
 #### Plot Methods ####
 	def plot_grid(self, basemap, marksize, linewidth):

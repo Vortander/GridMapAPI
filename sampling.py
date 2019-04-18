@@ -6,6 +6,9 @@ import os
 #Temporary
 from shapely.geometry import Point as Pt
 
+def _stratified_proportional_sampling(attr_point_distribution, trainpercent, valpercent, testpercent, bins=10, debug=True):
+	pass
+
 def stratified_proportional_sampling(attr_cell_distribution, trainpercent, testpercent, bins=10, debug=True):
 	attr_distribution = sorted([value[0] for value in attr_cell_distribution])
 	print(attr_distribution)
@@ -290,6 +293,25 @@ def gen_traintest_lists_sectormap( cities_objects = {}, border_distance=0.150, f
 	fw_distribution.close()
 	fw_train.close()
 	fw_test.close()
+
+def get_streetpoint_distribution( gridmap, points_dataframe, order='dsc', filename="StreetPointDistribution.csv", path=""):
+	distribution = []
+	points = points_dataframe
+
+	fw = open(os.path.join(path, filename), 'w')
+	fw.write("cell" + "," + "lat" + "," + "lon" + "," + "attr_value" + "\n")
+
+	count = 0
+	for row in points.itertuples():
+		count+=1
+		cell = gridmap.find_cell(float(row.lat), float(row.lon))
+		if cell != None:
+			attr_value = float(gridmap.grid[cell[0]][cell[1]]['total_variable'])
+			distribution.append((cell, row.lat, row.lon, attr_value))
+			fw.write(str(cell[0]) + "-" + str(cell[1]) + "," + str(row.lat) + "," + str(row.lon) + "," + str(attr_value) + "\n")
+
+	fw.close()
+	return distribution
 
 
 def gen_traintest_lists( gridmap, points_dataframe, lintransform="minmax", border_distance=0.150, filename="PointDistribution", path="", only_test=True ):
