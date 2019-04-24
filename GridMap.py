@@ -503,7 +503,7 @@ class GridMap:
 			for c in range(0, self.step):
 				if self.grid[l][c]['total_variable'] >= 0:
 					if self.grid[l][c]['in_territory'] == True:
-						if cell_list != None and (l, c) in cell_list:
+						if cell_list == None or (cell_list != None and (l, c) in cell_list):
 							total+=1
 							attr = self.grid[l][c]['total_variable']
 							distribution.append(attr)
