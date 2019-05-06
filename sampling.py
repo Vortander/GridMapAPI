@@ -2,12 +2,386 @@
 import numpy as np
 import random
 import os
+import copy
 
 #Temporary
 from shapely.geometry import Point as Pt
 
-def _stratified_proportional_sampling(attr_point_distribution, trainpercent, valpercent, testpercent, bins=10, debug=True):
-	pass
+def _stratified_proportional_sampling_folds(attr_cell_distribution, train_percent, test_percent, bins=10, folds=3):
+	attr_distribution = sorted([value[0] for value in attr_cell_distribution])
+	histogram_values, bin_edges = np.histogram(attr_distribution, bins=bins)
+	print(histogram_values)
+	print(bin_edges)
+
+	total_cells = float(len(attr_cell_distribution))
+	total_train = (train_percent * total_cells)/100.0
+	total_test = (test_percent * total_cells)/100.0
+
+	print(total_train, total_test)
+
+	#separate samples in bins
+	train_percent_bins = []
+	test_percent_bins = []
+	cells = {}
+
+	#Distribute quatities in train, validation and test sets.
+	for i, b in enumerate(histogram_values):
+
+		# Assures that at least one sample goes to train set.
+		if b <= 1:
+			bin_trainp = 1
+		else:
+			bin_trainp = np.floor((train_percent * b)/100.0)
+
+		bin_testp = np.floor((test_percent * b)/100.0)
+
+		if bin_testp < 1:
+			bin_testp = b - (bin_trainp)
+
+		print (i, b, bin_trainp, bin_testp)
+
+
+		train_percent_bins.append(int(bin_trainp))
+		test_percent_bins.append(int(bin_testp))
+
+		cells[(i,b)] = list()
+		for cell in attr_cell_distribution:
+			if cell[0] >= bin_edges[i] and cell[0] <= bin_edges[i+1]:
+				cells[(i,b)].append(cell)
+
+	#Test generation of cells:
+	print(cells.keys())
+	for key in cells.keys():
+		print(len(cells[key]))
+
+	#separate samples in train and validation for each fold
+	folds_train_cells = {}
+	folds_validation_cells = {}
+	test_cells = {}
+
+	for fold in range(0, folds):
+		folds_train_cells[fold] = list()
+		folds_validation_cells[fold] = list()
+
+	# Select and pop test cells
+	for i, b_test, all_b in zip(range(0, len(histogram_values)), test_percent_bins, histogram_values):
+		if b_test != 0:
+			test_cells[(i, b_test)] = list()
+			for index in range(0, b_test):
+				random.shuffle(cells[(i, all_b)])
+				sample = cells[(i, all_b)].pop()
+				test_cells[(i, b_test)].append(sample)
+
+	#After test pop
+	print(cells.keys())
+	for key in cells.keys():
+		print(len(cells[key]))
+
+	#For each fold, without test cells
+	# for fold in range(0, folds):
+
+	# 	fold_cells = copy.deepcopy(cells)
+
+
+	folds_train_cells = {}
+	folds_validation_cells = {}
+	fold_cells = {}
+
+	for fold in range(0, folds):
+		folds_train_cells[fold] = []
+		folds_validation_cells[fold] = []
+		fold_cells[fold] = []
+
+	#Select and pop train and test cells
+	for i, b_train, all_b in zip(range(0, len(histogram_values)), train_percent_bins, histogram_values):
+
+		# if b_train != 0:
+
+
+		number_of_cells_in_fold = np.floor(b_train / float(folds))
+		if number_of_cells_in_fold == 0:
+			number_of_cells_in_fold = np.ceil(b_train / float(folds))
+
+		print(i, b_train, number_of_cells_in_fold, all_b)
+
+		for fold in range(0, folds):
+			print(number_of_cells_in_fold, fold)
+			for index in range(0, int(number_of_cells_in_fold)):
+				random.shuffle(cells[(i, all_b)])
+				if len(cells[(i, all_b)]) > 0:
+					sample = cells[(i, all_b)].pop()
+					fold_cells[fold].append(sample)
+
+		print(fold_cells.keys())
+		print(len(fold_cells[0]), len(fold_cells[1]), len(fold_cells[2]), len(fold_cells[3]), len(fold_cells[4]))
+
+	# 3 fold example:
+	# folds_train_cells[0] = fold_cells[0] + fold_cells[1]
+	# folds_validation_cells[0] = fold_cells[2]
+
+	# folds_train_cells[1] = fold_cells[1] + fold_cells[2]
+	# folds_validation_cells[1] = fold_cells[0]
+
+	# folds_train_cells[2] = fold_cells[0] + fold_cells[2]
+	# folds_validation_cells[2] = fold_cells[1]
+
+	for i in range(0, folds):
+		folds_train_cells[i] = []
+		folds_validation_cells[i] = []
+
+	turns = [i for i in range(0, folds)]
+	for t in turns:
+		print(t, turns)
+		for ft in turns:
+			if ft != t:
+				print(turns[ft], t)
+				folds_train_cells[t] += fold_cells[ft]
+		folds_validation_cells[t] = fold_cells[t]
+
+	return folds_train_cells, folds_validation_cells, test_cells
+
+
+def _stratified_proportional_sampling(attr_cell_distribution, train_percent, validation_percent, test_percent, bins=10, debug=True):
+	attr_distribution = sorted([value[0] for value in attr_cell_distribution])
+	histogram_values, bin_edges = np.histogram(attr_distribution, bins=bins)
+	print(histogram_values)
+	print(bin_edges)
+
+	total_cells = float(len(attr_cell_distribution))
+	total_train = (train_percent * total_cells)/100.0
+	total_validation = (validation_percent * total_cells)/100.0
+	total_test = (test_percent * total_cells)/100.0
+
+	print(total_train, total_validation, total_test)
+
+	#separate samples in bins
+	train_percent_bins = []
+	validation_percent_bins = []
+	test_percent_bins = []
+	cells = {}
+
+	for i, b in enumerate(histogram_values):
+
+		# Assures that at least one sample goes to train set.
+		if b <= 1:
+			bin_trainp = 1
+		else:
+			bin_trainp = np.floor((train_percent * b)/100.0)
+
+		bin_testp = np.floor((test_percent * b)/100.0)
+		bin_valip = np.floor((validation_percent * b)/100.0)
+
+		if bin_testp < 1:
+			bin_testp = b - (bin_trainp + bin_valip)
+		if bin_valip < 1:
+			bin_valip = b - (bin_trainp + bin_testp)
+
+		print (i, b, bin_trainp, bin_valip, bin_testp)
+
+		train_percent_bins.append(int(bin_trainp))
+		validation_percent_bins.append(int(bin_valip))
+		test_percent_bins.append(int(bin_testp))
+
+		cells[(i,b)] = list()
+		for cell in attr_cell_distribution:
+			if cell[0] >= bin_edges[i] and cell[0] <= bin_edges[i+1]:
+				cells[(i,b)].append(cell)
+
+	print(train_percent_bins)
+	print(validation_percent_bins)
+	print(test_percent_bins)
+
+	#separate samples in train and test
+	train_cells = {}
+	validation_cells = {}
+	test_cells = {}
+
+	#for i, b_train, b_vali, b_test, all_b in  trainpercent_bins, testpercent_bins, histogram_values):
+	for i, b_train, b_vali, b_test, all_b in zip(range(0, len(histogram_values)), train_percent_bins, validation_percent_bins, test_percent_bins, histogram_values):
+
+		if b_train != 0:
+			train_cells[(i, b_train)] = list()
+			for index in range(0, b_train):
+				random.shuffle(cells[(i, all_b)])
+				sample = cells[(i, all_b)].pop()
+				train_cells[(i, b_train)].append(sample)
+
+		if b_vali != 0:
+			validation_cells[(i, b_vali)] = list()
+			for index in range(0, b_vali):
+				random.shuffle(cells[(i, all_b)])
+				sample = cells[(i, all_b)].pop()
+				validation_cells[(i, b_vali)].append(sample)
+
+		#test set
+		if b_test != 0:
+			test_cells[(i, b_test)] = list()
+			for index in range(0, b_test):
+				random.shuffle(cells[(i, all_b)])
+				sample = cells[(i, all_b)].pop()
+				test_cells[(i, b_test)].append(sample)
+
+	if debug == True:
+		print("-----------------------------------------------------------------------------------------")
+		print("Stratified Proportional Sampling of cells in Train, Validation and Test sets")
+		print("acording to the attribute value distribution")
+		print("-----------------------------------------------------------------------------------------")
+		print("Lenght of attribute distribution, or Total Number of cells: ", len(attr_distribution))
+		print("Histogram values: ", histogram_values)
+		print("Bin edges: ", bin_edges)
+		print("..........................................................................................")
+		print("Lenght of train distribution, or Total Train cells: ", str(train_percent)+"%", total_train)
+		print("Lenght of validation distribution, or Total Validation cells: ", str(validation_percent)+"%", total_validation)
+		print("Lenght of test distribution, or Total Test cells: ", str(test_percent)+"%", total_test)
+		print("Train histogram values: ", train_percent_bins)
+		print("Validation histogram values: ", validation_percent_bins)
+		print("Test histogram values: ", test_percent_bins)
+		print("..........................................................................................")
+		print("Train cells Keys (index, histogram_value): ")
+		print(train_cells.keys())
+		print("Validation cells Keys (index, histogram_value):")
+		print(validation_cells.keys())
+		print("Test cells Keys (index, histogram_value): ")
+		print(test_cells.keys())
+
+		for train_key in train_cells:
+			for test_key in test_cells:
+				if train_key[0] == test_key[0]:
+					print(train_key, test_key, ", Total bins: ", train_key[1] + test_key[1], ", Orig. Hist. value", histogram_values[train_key[0]], ", Total equal elements: ", np.sum(train_cells[train_key] == test_cells[test_key]))
+
+		for train_key in train_cells:
+			for validation_key in validation_cells:
+				if train_key[0] == validation_key[0]:
+					print(train_key, validation_key, ", Total bins: ", train_key[1] + validation_key[1], ", Orig. Hist. value", histogram_values[train_key[0]], ", Total equal elements: ", np.sum(train_cells[train_key] == validation_cells[validation_key]))
+
+		for validation_key in validation_cells:
+			for test_key in test_cells:
+				if validation_key[0] == test_key[0]:
+					print(validation_key, test_key, ", Total bins: ", validation_key[1] + test_key[1], ", Orig. Hist. value", histogram_values[validation_key[0]], ", Total equal elements: ", np.sum(validation_cells[validation_key] == test_cells[test_key]))
+
+
+	return train_cells, validation_cells, test_cells
+
+
+def stratified_proportional_sampling_points(attr_point_distribution, train_percent, validation_percent, test_percent, bins=10, debug=True):
+	#id, cell, lat, lon, attr
+	attr_distribution = sorted([value[4] for value in attr_point_distribution])
+	print(attr_distribution)
+	histogram_values, bin_edges = np.histogram(attr_distribution, bins=bins)
+	print(histogram_values)
+	print(bin_edges)
+
+	total_points = float(len(attr_point_distribution))
+	total_train = (train_percent * total_points)/100.0
+	total_validation = (validation_percent * total_points)/100.0
+	total_test = (test_percent * total_points)/100.0
+
+	print(total_train, total_validation, total_test)
+
+	#separate samples in bins
+	train_percent_bins = []
+	validation_percent_bins = []
+	test_percent_bins = []
+	points = {}
+
+	for i, b in enumerate(histogram_values):
+
+		bin_trainp = np.floor((train_percent * b)/100.0)
+
+		# Assures that at least one sample goes to train set.
+		if bin_trainp < 0:
+			bin_trainp = 1
+
+		bin_testp = np.floor((test_percent * b)/100.0)
+		bin_valip = np.floor((validation_percent * (b - (bin_testp)))/100.0)
+
+		print (i, b, bin_trainp, bin_valip, bin_testp)
+
+		train_percent_bins.append(int(bin_trainp))
+		validation_percent_bins.append(int(bin_valip))
+		test_percent_bins.append(int(bin_testp))
+
+		points[(i,b)] = list()
+		for point in attr_point_distribution:
+			if point[4] >= bin_edges[i] and point[4] <= bin_edges[i+1]:
+				points[(i,b)].append(point)
+
+	print(train_percent_bins)
+	print(validation_percent_bins)
+	print(test_percent_bins)
+
+	#separate samples in train and test
+	train_points = {}
+	validation_points = {}
+	test_points = {}
+
+	#for i, b_train, b_vali, b_test, all_b in  trainpercent_bins, testpercent_bins, histogram_values):
+	for i, b_train, b_vali, b_test, all_b in zip(range(0, len(histogram_values)), train_percent_bins, validation_percent_bins, test_percent_bins, histogram_values):
+
+		#train set
+		if b_train != 0:
+			train_points[(i, b_train)] = list()
+			for index in range(0, b_train):
+				random.shuffle(points[(i, all_b)])
+				sample = points[(i, all_b)].pop()
+				train_points[(i, b_train)].append(sample)
+
+		#validation set
+		if b_vali != 0:
+			validation_points[(i, b_vali)] = list()
+			for index in range(0, b_vali):
+				random.shuffle(points[(i, all_b)])
+				sample = points[(i, all_b)].pop()
+				validation_points[(i, b_vali)].append(sample)
+
+		#test set
+		if b_test != 0:
+			test_points[(i, b_test)] = list()
+			for index in range(0, b_test):
+				random.shuffle(points[(i, all_b)])
+				sample = points[(i, all_b)].pop()
+				test_points[(i, b_test)].append(sample)
+
+	if debug == True:
+		print("-----------------------------------------------------------------------------------------")
+		print("Stratified Proportional Sampling of points in Train, Validation and Test sets")
+		print("acording to the attribute value distribution")
+		print("-----------------------------------------------------------------------------------------")
+		print("Lenght of attribute distribution, or Total Number of points: ", len(attr_distribution))
+		print("Histogram values: ", histogram_values)
+		print("Bin edges: ", bin_edges)
+		print("..........................................................................................")
+		print("Lenght of train distribution, or Total Train points: ", str(train_percent)+"%", total_train)
+		print("Lenght of validation distribution, or Total Validation points: ", str(validation_percent)+"%", total_validation)
+		print("Lenght of test distribution, or Total Test points: ", str(test_percent)+"%", total_test)
+		print("Train histogram values: ", train_percent_bins)
+		print("Validation histogram values: ", validation_percent_bins)
+		print("Test histogram values: ", test_percent_bins)
+		print("..........................................................................................")
+		print("Train points Keys (index, histogram_value): ")
+		print(train_points.keys())
+		print("Validation points Keys (index, histogram_value):")
+		print(validation_points.keys())
+		print("Test points Keys (index, histogram_value): ")
+		print(test_points.keys())
+
+		for train_key in train_points:
+			for test_key in test_points:
+				if train_key[0] == test_key[0]:
+					print(train_key, test_key, ", Total bins: ", train_key[1] + test_key[1], ", Orig. Hist. value", histogram_values[train_key[0]], ", Total equal elements: ", np.sum(train_points[train_key] == test_points[test_key]))
+
+		for train_key in train_points:
+			for validation_key in validation_points:
+				if train_key[0] == validation_key[0]:
+					print(train_key, validation_key, ", Total bins: ", train_key[1] + validation_key[1], ", Orig. Hist. value", histogram_values[train_key[0]], ", Total equal elements: ", np.sum(train_points[train_key] == validation_points[validation_key]))
+
+		for validation_key in validation_points:
+			for test_key in test_points:
+				if validation_key[0] == test_key[0]:
+					print(validation_key, test_key, ", Total bins: ", validation_key[1] + test_key[1], ", Orig. Hist. value", histogram_values[validation_key[0]], ", Total equal elements: ", np.sum(validation_points[validation_key] == test_points[test_key]))
+
+
+	return train_points, validation_points, test_points
 
 def stratified_proportional_sampling(attr_cell_distribution, trainpercent, testpercent, bins=10, debug=True):
 	attr_distribution = sorted([value[0] for value in attr_cell_distribution])
@@ -312,6 +686,149 @@ def get_streetpoint_distribution( gridmap, points_dataframe, order='dsc', filena
 
 	fw.close()
 	return distribution
+
+def gen_traintest_lists_cells(gridmap, points_dataframe, border_distance=0.150, filename="PointDistribution", path="", distance_testval_only=True):
+	# Apply point distance between test-train and val-train points only.
+	# File headers
+	# id,cell,lat,lon,attr,train_or_test
+	all_distribution_file = open(os.path.join(path, filename + ".csv"), "w")
+	train_distribution_file = open(os.path.join(path, filename + "_train.csv"), "w")
+	validation_distribution_file = open(os.path.join(path, filename + "_validation.csv"), "w")
+	test_distribution_file = open(os.path.join(path, filename + "_test.csv"), "w")
+
+	count = 0
+	points = points_dataframe
+	for row in points.itertuples():
+		count+=1
+		cell = gridmap.find_cell(float(row.lat), float(row.lon))
+		train_or_test = gridmap.grid[cell[0]][cell[1]]['train_or_test']
+		attr_value = float(gridmap.grid[cell[0]][cell[1]]['total_variable'])
+
+		all_distribution_file.write(row.id + ";" + str(cell[0])+"-"+str(cell[1]) + ";" + row.lat + ";" + row.lon + ";" + str(attr_value) + ";" + str(train_or_test) + ";" + str(attr_value) + "\n")
+		if train_or_test == 'train':
+			if distance_testval_only != True:
+				# Test if point is above borderlines
+				border1_online = gridmap._near_line( gridmap.grid[cell[0]][cell[1]]['leftlon'], gridmap.grid[cell[0]][cell[1]]['upperlat'], gridmap.grid[cell[0]][cell[1]]['leftlon'], gridmap.grid[cell[0]][cell[1]]['lowerlat'], float(row.lon), float(row.lat), border_distance)
+				border2_online = gridmap._near_line( gridmap.grid[cell[0]][cell[1]]['rightlon'], gridmap.grid[cell[0]][cell[1]]['upperlat'], gridmap.grid[cell[0]][cell[1]]['rightlon'], gridmap.grid[cell[0]][cell[1]]['lowerlat'], float(row.lon), float(row.lat), border_distance)
+				border3_online = gridmap._near_line( gridmap.grid[cell[0]][cell[1]]['rightlon'], gridmap.grid[cell[0]][cell[1]]['lowerlat'], gridmap.grid[cell[0]][cell[1]]['leftlon'], gridmap.grid[cell[0]][cell[1]]['lowerlat'], float(row.lon), float(row.lat), border_distance)
+				border4_online = gridmap._near_line( gridmap.grid[cell[0]][cell[1]]['rightlon'], gridmap.grid[cell[0]][cell[1]]['upperlat'], gridmap.grid[cell[0]][cell[1]]['leftlon'], gridmap.grid[cell[0]][cell[1]]['upperlat'], float(row.lon), float(row.lat), border_distance)
+				if (border1_online or border2_online or border3_online or border4_online) == False:
+					train_distribution_file.write(row.id + ";" + str(cell[0])+"-"+str(cell[1]) + ";" + row.lat + ";" + row.lon + ";" + str(attr_value) + "\n")
+			elif distance_testval_only == True:
+				train_distribution_file.write(row.id + ";" + str(cell[0])+"-"+str(cell[1]) + ";" + row.lat + ";" + row.lon + ";" + str(attr_value) + "\n")
+
+		elif train_or_test == 'test':
+			# Test if point is above borderlines
+			border1_online = gridmap._near_line( gridmap.grid[cell[0]][cell[1]]['leftlon'], gridmap.grid[cell[0]][cell[1]]['upperlat'], gridmap.grid[cell[0]][cell[1]]['leftlon'], gridmap.grid[cell[0]][cell[1]]['lowerlat'], float(row.lon), float(row.lat), border_distance)
+			border2_online = gridmap._near_line( gridmap.grid[cell[0]][cell[1]]['rightlon'], gridmap.grid[cell[0]][cell[1]]['upperlat'], gridmap.grid[cell[0]][cell[1]]['rightlon'], gridmap.grid[cell[0]][cell[1]]['lowerlat'],float(row.lon), float(row.lat), border_distance)
+			border3_online = gridmap._near_line( gridmap.grid[cell[0]][cell[1]]['rightlon'], gridmap.grid[cell[0]][cell[1]]['lowerlat'], gridmap.grid[cell[0]][cell[1]]['leftlon'], gridmap.grid[cell[0]][cell[1]]['lowerlat'], float(row.lon), float(row.lat), border_distance)
+			border4_online = gridmap._near_line( gridmap.grid[cell[0]][cell[1]]['rightlon'], gridmap.grid[cell[0]][cell[1]]['upperlat'], gridmap.grid[cell[0]][cell[1]]['leftlon'], gridmap.grid[cell[0]][cell[1]]['upperlat'], float(row.lon), float(row.lat), border_distance)
+			if (border1_online or border2_online or border3_online or border4_online) == False:
+				test_distribution_file.write(row.id + ";" + str(cell[0])+"-"+str(cell[1]) + ";" + row.lat + ";" + row.lon + ";" + str(attr_value) + "\n")
+
+		elif train_or_test == 'validation':
+			# Test if point is above borderlines
+			border1_online = gridmap._near_line( gridmap.grid[cell[0]][cell[1]]['leftlon'], gridmap.grid[cell[0]][cell[1]]['upperlat'], gridmap.grid[cell[0]][cell[1]]['leftlon'], gridmap.grid[cell[0]][cell[1]]['lowerlat'], float(row.lon), float(row.lat), border_distance)
+			border2_online = gridmap._near_line( gridmap.grid[cell[0]][cell[1]]['rightlon'], gridmap.grid[cell[0]][cell[1]]['upperlat'], gridmap.grid[cell[0]][cell[1]]['rightlon'], gridmap.grid[cell[0]][cell[1]]['lowerlat'],float(row.lon), float(row.lat), border_distance)
+			border3_online = gridmap._near_line( gridmap.grid[cell[0]][cell[1]]['rightlon'], gridmap.grid[cell[0]][cell[1]]['lowerlat'], gridmap.grid[cell[0]][cell[1]]['leftlon'], gridmap.grid[cell[0]][cell[1]]['lowerlat'], float(row.lon), float(row.lat), border_distance)
+			border4_online = gridmap._near_line( gridmap.grid[cell[0]][cell[1]]['rightlon'], gridmap.grid[cell[0]][cell[1]]['upperlat'], gridmap.grid[cell[0]][cell[1]]['leftlon'], gridmap.grid[cell[0]][cell[1]]['upperlat'], float(row.lon), float(row.lat), border_distance)
+			if (border1_online or border2_online or border3_online or border4_online) == False:
+				validation_distribution_file.write(row.id + ";" + str(cell[0])+"-"+str(cell[1]) + ";" + row.lat + ";" + row.lon + ";" + str(attr_value) + "\n")
+
+	all_distribution_file.close()
+	train_distribution_file.close()
+	validation_distribution_file.close()
+	test_distribution_file.close()
+
+
+def gen_traintest_lists_points( train_points, validation_points, test_points, point_distance=0.150, filename="PointDistribution", path="" ):
+	#pdistance_testval_only=True: Apply point distance between test-train and val-train points only.
+	all_distribution_file = open(os.path.join(path, filename + ".csv"), "w")
+	train_distribution_file = open(os.path.join(path, filename + "_train.csv"), "w")
+	validation_distribution_file = open(os.path.join(path, filename + "_validation.csv"), "w")
+	test_distribution_file = open(os.path.join(path, filename + "_test.csv"), "w")
+
+	#File headers
+	# id,cell,lat,lon,attr,train_or_test
+	for key in test_points.keys():
+		for point in test_points[key]:
+			test_distribution_file.write(point[0] + "," + point[1] + "," + point[2] + "," + point[3] + "," + str(point[4]) + "," + "test" + "\n")
+			all_distribution_file.write(point[0] + "," + point[1] + "," + point[2] + "," + point[3] + "," + str(point[4]) + "," + "test" + "\n")
+
+	test_distribution_file.close()
+
+	valid_valpoints = {}
+	for vkey in validation_points.keys():
+		valid = []
+		for val_point in validation_points[vkey]:
+			near_test = []
+			vlat = float(val_point[2])
+			vlon = float(val_point[3])
+
+			for tkey in test_points.keys():
+				for test_point in test_points[tkey]:
+					tlat = float(test_point[2])
+					tlon = float(test_point[3])
+
+					distance = _haversine(vlat, vlon, tlat, tlon)
+					if distance <= point_distance:
+						near_test.append((tlat, tlon, distance))
+
+			if len(near_test) == 0:
+				validation_distribution_file.write(val_point[0] + "," + val_point[1] + "," + val_point[2] + "," + val_point[3] + "," + str(val_point[4]) + "," + "validation" + "\n")
+				all_distribution_file.write(val_point[0] + "," + val_point[1] + "," + val_point[2] + "," + val_point[3] + "," + str(val_point[4]) + "," + "validation" + "\n")
+				valid.append((val_point[0],val_point[1],val_point[2],val_point[3],val_point[4]))
+
+		valid_valpoints[vkey] = valid
+
+	validation_distribution_file.close()
+
+	valid_trainpoints = {}
+	for trainkey in train_points.keys():
+		valid = []
+		for train_point in train_points[trainkey]:
+			near_test = []
+			trlat = float(train_point[2])
+			trlon = float(train_point[3])
+
+			for testkey in test_points.keys():
+				for test_point in test_points[testkey]:
+					teslat = float(test_point[2])
+					teslon = float(test_point[3])
+
+					distance = _haversine(trlat, trlon, teslat, teslon)
+					if distance <= point_distance:
+						near_test.append((tlat, tlon, distance))
+
+			if len(near_test) == 0:
+				valid.append((train_point[0],train_point[1],train_point[2],train_point[3],train_point[4]))
+
+		valid_trainpoints[trainkey] = valid
+
+	for trainkey in valid_trainpoints.keys():
+		for train_point in valid_trainpoints[trainkey]:
+			near_val = []
+			trlat = float(train_point[2])
+			trlon = float(train_point[3])
+
+			for valkey in valid_valpoints.keys():
+				for val_point in valid_valpoints[valkey]:
+					vlat = float(val_point[2])
+					vlon = float(val_point[3])
+
+					distance = _haversine(trlat, trlon, vlat, vlon)
+					if distance <= point_distance:
+						near_val.append((trlat, trlon, distance))
+
+			if len(near_val) == 0:
+				train_distribution_file.write(train_point[0] + "," + train_point[1] + "," + train_point[2] + "," + train_point[3] + "," + str(train_point[4]) + "," + "train" + "\n")
+				all_distribution_file.write(train_point[0] + "," + train_point[1] + "," + train_point[2] + "," + train_point[3] + "," + str(train_point[4]) + "," + "train" + "\n")
+
+
+	all_distribution_file.close()
+	train_distribution_file.close()
+
+
 
 
 def gen_traintest_lists( gridmap, points_dataframe, lintransform="minmax", border_distance=0.150, filename="PointDistribution", path="", only_test=True ):
