@@ -113,7 +113,7 @@ def _stratified_proportional_sampling_folds(attr_cell_distribution, train_percen
 					fold_cells[fold].append(sample)
 
 		print(fold_cells.keys())
-		print(len(fold_cells[0]), len(fold_cells[1]), len(fold_cells[2]), len(fold_cells[3]), len(fold_cells[4]))
+		#print(len(fold_cells[0]), len(fold_cells[1]), len(fold_cells[2]), len(fold_cells[3]), len(fold_cells[4]))
 
 	# 3 fold example:
 	# folds_train_cells[0] = fold_cells[0] + fold_cells[1]

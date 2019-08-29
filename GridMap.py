@@ -406,19 +406,39 @@ class GridMap:
 			return "Error while loading file."
 
 
-	def get_variable_distribution(self, order='dsc', streetpoints=False):
-		#traintest = True include only train and test cells
+	def get_variable_distribution(self, order='dsc', streetpoints=False, train_or_test=None, cell_list=None):
+		#train_or_test = True include only train and test cells
+		#cell_list = ['23-24',..., '50-90', '30-10']
 		distribution = []
-		for l in range(0, self.step):
-			for c in range(0, self.step):
-				if self.grid[l][c]['in_territory'] == True:
-					attr = self.grid[l][c]['total_variable']
-					label = self.grid[l][c]['train_or_test']
-					street = self.grid[l][c]['total_street_points']
-					if streetpoints == False:
-						distribution.append([attr, (l, c), label])
-					else:
-						distribution.append([attr, (l, c), label, street])
+		if cell_list == None:
+			for l in range(0, self.step):
+				for c in range(0, self.step):
+					if self.grid[l][c]['in_territory'] == True:
+						if train_or_test == None:
+							attr = self.grid[l][c]['total_variable']
+							label = self.grid[l][c]['train_or_test']
+							street = self.grid[l][c]['total_street_points']
+						elif self.grid[l][c]['train_or_test'] == train_or_test:
+							attr = self.grid[l][c]['total_variable']
+							label = self.grid[l][c]['train_or_test']
+							street = self.grid[l][c]['total_street_points']
+
+						if streetpoints == False:
+							distribution.append([attr, (l, c), label])
+						else:
+							distribution.append([attr, (l, c), label, street])
+
+		else:
+			for lc in cell_list:
+				l, c = lc.split('-')
+				attr = self.grid[int(l)][int(c)]['total_variable']
+				label = self.grid[int(l)][int(c)]['train_or_test']
+				street = self.grid[int(l)][int(c)]['total_street_points']
+
+				if streetpoints == False:
+					distribution.append([attr, (l, c), label])
+				else:
+					distribution.append([attr, (l, c), label, street])
 
 		if order=='asc':
 			reverse = False
