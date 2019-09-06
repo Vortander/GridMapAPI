@@ -418,15 +418,33 @@ class GridMap:
 							attr = self.grid[l][c]['total_variable']
 							label = self.grid[l][c]['train_or_test']
 							street = self.grid[l][c]['total_street_points']
-						elif self.grid[l][c]['train_or_test'] == train_or_test:
-							attr = self.grid[l][c]['total_variable']
-							label = self.grid[l][c]['train_or_test']
-							street = self.grid[l][c]['total_street_points']
 
-						if streetpoints == False:
-							distribution.append([attr, (l, c), label])
-						else:
-							distribution.append([attr, (l, c), label, street])
+							if streetpoints == False:
+								distribution.append([attr, (l, c), label])
+							else:
+								distribution.append([attr, (l, c), label, street])
+
+						if type(train_or_test) is str: 
+							if self.grid[l][c]['train_or_test'] == train_or_test:
+								attr = self.grid[l][c]['total_variable']
+								label = self.grid[l][c]['train_or_test']
+								street = self.grid[l][c]['total_street_points']
+
+								if streetpoints == False:
+									distribution.append([attr, (l, c), label])
+								else:
+									distribution.append([attr, (l, c), label, street])
+
+						elif type(train_or_test) is list:
+							if self.grid[l][c]['train_or_test'] in train_or_test:
+								attr = self.grid[l][c]['total_variable']
+								label = self.grid[l][c]['train_or_test']
+								street = self.grid[l][c]['total_street_points']
+
+								if streetpoints == False:
+									distribution.append([attr, (l, c), label])
+								else:
+									distribution.append([attr, (l, c), label, street])
 
 		else:
 			for lc in cell_list:
@@ -548,6 +566,9 @@ class GridMap:
 								cs = basemap.contourf(xi, yi, zi, vmin=self.get_min_variable()['total_variable'], vmax=self.get_max_variable()['total_variable'], cmap = plt.cm.jet, alpha=alpha)
 							else:
 								cs = basemap.contourf(xi, yi, zi, vmin=force_max_min[0], vmax=force_max_min[1], cmap = plt.cm.jet, alpha=alpha)
+
+				sys.stdout.write("Progress/Total: %d/%d   \r" % (total, self.step * self.step))
+				sys.stdout.flush()
 
 		if colorbar == True:
 			ord_distribution = np.sort(distribution)
