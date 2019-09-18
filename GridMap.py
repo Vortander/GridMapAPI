@@ -27,7 +27,7 @@ def _haversine(lat1, lon1, lat2, lon2):
 	a = math.sin(dLat/2) * math.sin(dLat/2) + math.cos(lat1 * math.pi / 180) * math.cos(lat2 * math.pi / 180) * math.sin(dLon/2) * math.sin(dLon/2)
 	c = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
 	d = R * c
-	d * 1000
+	#d * 1000
 
 	return d
 
@@ -406,7 +406,7 @@ class GridMap:
 			return "Error while loading file."
 
 
-	def get_variable_distribution(self, order='dsc', streetpoints=False, train_or_test=None, cell_list=None):
+	def get_variable_distribution(self, order='dsc', streetpoints=False, train_or_test=None, cell_list=None, streetpoints_only=True):
 		#train_or_test = True include only train and test cells
 		#cell_list = ['23-24',..., '50-90', '30-10']
 		distribution = []
@@ -424,7 +424,7 @@ class GridMap:
 							else:
 								distribution.append([attr, (l, c), label, street])
 
-						if type(train_or_test) is str: 
+						if type(train_or_test) is str:
 							if self.grid[l][c]['train_or_test'] == train_or_test:
 								attr = self.grid[l][c]['total_variable']
 								label = self.grid[l][c]['train_or_test']
@@ -436,14 +436,14 @@ class GridMap:
 									distribution.append([attr, (l, c), label, street])
 
 						elif type(train_or_test) is list:
-							if self.grid[l][c]['train_or_test'] in train_or_test:
+							if self.grid[l][c]['train_or_test'] in train_or_test and streetpoints_only == True:
 								attr = self.grid[l][c]['total_variable']
 								label = self.grid[l][c]['train_or_test']
 								street = self.grid[l][c]['total_street_points']
 
-								if streetpoints == False:
+								if streetpoints == False and street != 0:
 									distribution.append([attr, (l, c), label])
-								else:
+								elif street != 0:
 									distribution.append([attr, (l, c), label, street])
 
 		else:
@@ -531,7 +531,7 @@ class GridMap:
 		cb = basemap.colorbar(m, location='bottom', pad="5%")
 
 
-	def hot_spot(self, basemap, linewidth, colorbar=False, labelsize=25, cell_list=None, force_max_min=(None, None), alpha=0.5):
+	def hot_spot(self, basemap, linewidth, colorbar=False, labelsize=25, cell_list=None, force_max_min=(None, None), alpha=0.5, cmap=plt.cm.jet):
 		self.plot_grid(basemap, 0, linewidth)
 
 		distribution = []
@@ -563,16 +563,15 @@ class GridMap:
 							x, y, z = data.X.values, data.Y.values, data.Z.values
 							zi = griddata(x, y, z, xi, yi, interp='linear')
 							if force_max_min == (None, None):
-								cs = basemap.contourf(xi, yi, zi, vmin=self.get_min_variable()['total_variable'], vmax=self.get_max_variable()['total_variable'], cmap = plt.cm.jet, alpha=alpha)
+								cs = basemap.contourf(xi, yi, zi, vmin=self.get_min_variable()['total_variable'], vmax=self.get_max_variable()['total_variable'], cmap=cmap, alpha=alpha)
 							else:
-								cs = basemap.contourf(xi, yi, zi, vmin=force_max_min[0], vmax=force_max_min[1], cmap = plt.cm.jet, alpha=alpha)
+								cs = basemap.contourf(xi, yi, zi, vmin=force_max_min[0], vmax=force_max_min[1], cmap=cmap, alpha=alpha)
 
 				sys.stdout.write("Progress/Total: %d/%d   \r" % (total, self.step * self.step))
 				sys.stdout.flush()
 
 		if colorbar == True:
 			ord_distribution = np.sort(distribution)
-			cmap = plt.cm.jet
 			if force_max_min == (None, None):
 				norm = mpl.colors.Normalize(vmin=self.get_min_variable()['total_variable'], vmax=ord_distribution[total-1])
 			else:
@@ -598,7 +597,7 @@ class GridMap:
 			cbar.ax.tick_params(labelsize=labelsize)
 
 
-	def plot_variable_points(self, basemap, submap=False, lower_left_cell=None, upper_right_cell=None, name=None, color='g', mark='b'):
+	def plot_variable_points(self, basemap, submap=False, lower_left_cell=None, upper_right_cell=None, name=None, color='g', mark='b', mark_size=5):
 		lons = []
 		lats = []
 		if submap == False:
@@ -631,19 +630,26 @@ class GridMap:
 		# 			lons.append(point.lon)
 		# 			lats.append(point.lat)
 
-		basemap.scatter(lons, lats, marker=mark, color=color)
+		basemap.scatter(lons, lats, marker=mark, color=color, s=mark_size, alpha=0.5)
 
-	def plot_street_points(self, basemap, color='b', mark='o'):
+	def plot_street_points(self, basemap, color='b', mark='o', mark_size=8, alpha=0.5):
 		self.plot_grid(basemap, 0, 1.0)
 		lons = []
 		lats = []
 		for l in range(0, self.step):
 			for c in range(0, self.step):
 				for point in self.grid[l][c]['street_points']:
-					lons.append(point.x)
-					lats.append(point.y)
+					if type(point) is tuple:
+						x, y = basemap(float(point[2]), float(point[1]))
+						print(x, y)
+					else:
+						x = point.x
+						y = point.y
 
-		basemap.scatter(lons, lats, marker=mark, color=color)
+					lons.append(x)
+					lats.append(y)
+
+		basemap.scatter(lons, lats, marker=mark, color=color, s=mark_size, alpha=alpha)
 
 	def street_points(self, basemap, corner_list, interpol_list, cmark='g', imark='b'):
 		#corner_list, interpol_list = lat, lon

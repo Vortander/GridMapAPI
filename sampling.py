@@ -740,7 +740,6 @@ def gen_traintest_lists_cells(gridmap, points_dataframe, border_distance=0.150, 
 	validation_distribution_file.close()
 	test_distribution_file.close()
 
-
 def gen_traintest_lists_points( train_points, validation_points, test_points, point_distance=0.150, filename="PointDistribution", path="" ):
 	#pdistance_testval_only=True: Apply point distance between test-train and val-train points only.
 	all_distribution_file = open(os.path.join(path, filename + ".csv"), "w")
