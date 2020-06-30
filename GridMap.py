@@ -436,6 +436,16 @@ class GridMap:
 									distribution.append([attr, (l, c), label, street])
 
 						elif type(train_or_test) is list:
+							if self.grid[l][c]['train_or_test'] in train_or_test and streetpoints_only == False:
+								attr = self.grid[l][c]['total_variable']
+								label = self.grid[l][c]['train_or_test']
+								street = self.grid[l][c]['total_street_points']
+
+								if streetpoints == False and street == 0:
+									distribution.append([attr, (l, c), label])
+								elif street != 0:
+									distribution.append([attr, (l, c), label, street])
+
 							if self.grid[l][c]['train_or_test'] in train_or_test and streetpoints_only == True:
 								attr = self.grid[l][c]['total_variable']
 								label = self.grid[l][c]['train_or_test']
@@ -531,7 +541,7 @@ class GridMap:
 		cb = basemap.colorbar(m, location='bottom', pad="5%")
 
 
-	def hot_spot(self, basemap, linewidth, colorbar=False, labelsize=25, cell_list=None, force_max_min=(None, None), alpha=0.5, cmap=plt.cm.jet):
+	def hot_spot(self, basemap, linewidth, colorbar=False, labelsize=25, cell_list=None, force_max_min=(None, None), alpha=0.5, cmap=plt.cm.jet, nticks=12):
 		self.plot_grid(basemap, 0, linewidth)
 
 		distribution = []
@@ -587,12 +597,20 @@ class GridMap:
 				m0=int(force_max_min[0])
 				m4=int(force_max_min[1])
 
-			m1=int(1*(m4-m0)/4.0 + m0)
-			m2=int(2*(m4-m0)/4.0 + m0)
-			m3=int(3*(m4-m0)/4.0 + m0)
-			print(m0, m1, m2, m3, m4)
-			cbar.set_ticks([m0,m1,m2,m3,m4])
-			cbar.set_ticklabels([m0,m1,m2,m3,m4])
+			# Use this for 4 spaced ticks
+			# m1=int(1*(m4-m0)/4.0 + m0)
+			# m2=int(2*(m4-m0)/4.0 + m0)
+			# m3=int(3*(m4-m0)/4.0 + m0)
+			# print(m0, m1, m2, m3, m4)
+			# cbar.set_ticks([m0,m1,m2,m3,m4])
+			# cbar.set_ticklabels([m0,m1,m2,m3,m4])
+
+			# Use this for 12 spaced ticks
+			# nticks = 12
+			ticks = [m0] + [(i * (m4 - m0) / int(nticks) + m0) for i in range(1, int(nticks))] + [m4]
+			print(ticks, len(ticks))
+			cbar.set_ticks(ticks)
+			cbar.set_ticklabels([int(t) for t in  ticks])
 
 			cbar.ax.tick_params(labelsize=labelsize)
 
